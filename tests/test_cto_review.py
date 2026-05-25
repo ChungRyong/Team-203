@@ -70,11 +70,17 @@ class TestCtoReview(unittest.TestCase):
         # Simulate local 'claude' CLI command not found (FileNotFoundError)
         mock_sub.side_effect = FileNotFoundError()
         
-        # Mock task APIs
-        mock_get_res = MagicMock()
-        mock_get_res.status_code = 200
-        mock_get_res.json.return_value = {"task_id": "TASK-123", "title": "Tetris", "status": "PENDING"}
-        mock_get.return_value = mock_get_res
+        # Route mock_get side effects to handle both CONFIG and TASKS endpoints
+        def mock_get_side_effect(url, **kwargs):
+            res = MagicMock()
+            res.status_code = 200
+            if "config/cto-review" in url:
+                res.json.return_value = {"cto_review_enabled": True}
+            else:
+                res.json.return_value = {"task_id": "TASK-123", "title": "Tetris", "status": "PENDING"}
+            return res
+            
+        mock_get.side_effect = mock_get_side_effect
         
         mock_post_res = MagicMock()
         mock_post_res.status_code = 200
@@ -92,6 +98,27 @@ class TestCtoReview(unittest.TestCase):
             json={"task_id": "TASK-123", "title": "Tetris", "status": "PASSED_WITHOUT_CLAUDE"},
             timeout=5
         )
+
+    @patch("requests.get")
+    def test_cto_review_disabled_bypasses_all(self, mock_get):
+        # 1. Setup mock that return cto_review_enabled = False (OFF)
+        mock_get_res = MagicMock()
+        mock_get_res.status_code = 200
+        mock_get_res.json.return_value = {"cto_review_enabled": False}
+        mock_get.return_value = mock_get_res
+        
+        # 2. Write a highly illegal (> 50 lines) function that would normally fail AST and report penalty
+        filepath = os.path.join(self.test_dir, "illegal_but_disabled.py")
+        long_body = "\n".join([f"    x_{i} = {i}" for i in range(100)]) # 100 clean lines of code
+        code = f"def giant_illegal_function():\n{long_body}\n"
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(code)
+            
+        # 3. Running main should bypass everything and exit with 0 (success)
+        with patch("sys.argv", ["run_cto_review.py", filepath, "TASK-123"]):
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            self.assertEqual(cm.exception.code, 0) # Bypassed and succeeded!
 
 if __name__ == "__main__":
     unittest.main()

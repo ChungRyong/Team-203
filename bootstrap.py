@@ -4,7 +4,7 @@ import os
 # Append the current directory so Python can import the 'app' module
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.database import create_tables, seed_agent_penalties, DB_PATH
+from app.database import create_tables, seed_agent_penalties, DB_PATH, update_system_setting
 
 def bootstrap():
     print("🚀 [Team-203 Bootstrap] Initializing Virtual Office Infrastructure...")
@@ -26,6 +26,15 @@ def bootstrap():
         print("✅ Core agents seeded successfully with 0 warning stack.")
     except Exception as e:
         print(f"❌ Failed to seed core agents: {e}")
+        sys.exit(1)
+        
+    # 3. Seed initial system settings
+    print("⚙️ Seeding initial system configuration settings (cto_review_enabled = '0')...")
+    try:
+        update_system_setting("cto_review_enabled", "0") # Default is OFF (disabled)
+        print("✅ System configuration seeded successfully (CTO Review is OFF by default).")
+    except Exception as e:
+        print(f"❌ Failed to seed system configuration: {e}")
         sys.exit(1)
         
     print("\n🎉 [Team-203 Bootstrap] Setup finished successfully! DB is ready to serve.")

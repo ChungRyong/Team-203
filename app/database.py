@@ -67,6 +67,14 @@ def create_tables():
     );
     """)
     
+    # 5. system_settings Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS system_settings (
+        setting_key TEXT PRIMARY KEY,
+        setting_value TEXT NOT NULL
+    );
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -250,4 +258,35 @@ def run_git_snapshot(room_id: str, action_type: str):
     except Exception as e:
         print(f"🚨 [Git Snapshot Error] Unexpected git error bypassed: {str(e)}")
         return False
+
+def get_system_setting(key: str, default_value: str = "0") -> str:
+    """
+    Retrieves a configuration value from the SQLite system_settings table.
+    """
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT setting_value FROM system_settings WHERE setting_key = ?", (key,)).fetchone()
+        return row['setting_value'] if row else default_value
+    except Exception as e:
+        print(f"⚠️ [DB Warning] Failed to read system setting '{key}': {e}")
+        return default_value
+    finally:
+        conn.close()
+
+def update_system_setting(key: str, value: str):
+    """
+    Inserts or updates a configuration value in the SQLite system_settings table.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO system_settings (setting_key, setting_value) VALUES (?, ?)",
+            (key, str(value))
+        )
+        conn.commit()
+        print(f"⚙️ [DB Config] System setting '{key}' updated to '{value}'.")
+    except Exception as e:
+        print(f"🚨 [DB Error] Failed to update system setting '{key}': {e}")
+    finally:
+        conn.close()
 

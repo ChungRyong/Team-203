@@ -288,3 +288,30 @@ def get_agent_prompt(agent_name: str, req: PromptRequest):
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class CtoReviewConfigRequest(BaseModel):
+    enabled: bool = Field(..., example=False)
+
+@app.get("/api/config/cto-review")
+def get_cto_review_config():
+    """
+    Returns the current ON/OFF state of the dynamic Claude CTO code review system.
+    """
+    val = database.get_system_setting("cto_review_enabled", "0")
+    return {
+        "cto_review_enabled": True if val == "1" else False
+    }
+
+@app.post("/api/config/cto-review")
+def update_cto_review_config(req: CtoReviewConfigRequest):
+    """
+    Allows Hermes (or the CEO) to dynamically toggle the Claude CTO code review system.
+    1: ON (Enabled), 0: OFF (Disabled)
+    """
+    val_str = "1" if req.enabled else "0"
+    database.update_system_setting("cto_review_enabled", val_str)
+    return {
+        "status": "success",
+        "cto_review_enabled": req.enabled,
+        "message": f"CTO dynamic code review has been successfully turned {'ON' if req.enabled else 'OFF'}."
+    }
