@@ -1,0 +1,223 @@
+import sqlite3
+import os
+import json
+
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hermes_soul.db")
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    # WAL Mode for high concurrency
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
+    return conn
+
+def create_tables():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. tasks Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        task_id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'PASSED_WITHOUT_CLAUDE')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    
+    # 2. rooms Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS rooms (
+        room_id TEXT PRIMARY KEY,
+        room_name TEXT NOT NULL,
+        task_id TEXT,
+        allowed_agents TEXT NOT NULL, -- JSON string array, e.g. '["Concept-Agent", "Dev-Agent"]'
+        turn_count INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1, -- 1: active, 0: closed/destructed
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks (task_id)
+    );
+    """)
+    
+    # 3. messages Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id TEXT NOT NULL,
+        sender_role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        payload_type TEXT DEFAULT 'TEXT' CHECK(payload_type IN ('TEXT', 'CODE', 'JSON_SPEC', 'IMAGE_PATH', 'JSON_VALIDATED', 'SYSTEM_SUMMARY')),
+        is_archived INTEGER DEFAULT 0, -- 1: archived by Blinky context compression, 0: active
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES rooms (room_id)
+    );
+    """)
+    
+    # 4. agent_penalties Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agent_penalties (
+        agent_name TEXT PRIMARY KEY,
+        warning_count INTEGER DEFAULT 0,
+        is_penalized INTEGER DEFAULT 0, -- 1: penalized (Temp 0.0), 0: normal
+        last_penalty_reason TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# --- CRUD HELPER FUNCTIONS ---
+
+def add_task(task_id, title, description="", status="PENDING"):
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "INSERT INTO tasks (task_id, title, description, status) VALUES (?, ?, ?, ?)",
+            (task_id, title, description, status)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_task(task_id):
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+def update_task_status(task_id, status):
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE task_id = ?",
+            (status, task_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def add_room(room_id, room_name, task_id, allowed_agents):
+    conn = get_db_connection()
+    try:
+        agents_str = json.dumps(allowed_agents)
+        conn.execute(
+            "INSERT OR REPLACE INTO rooms (room_id, room_name, task_id, allowed_agents, turn_count, is_active) VALUES (?, ?, ?, ?, 0, 1)",
+            (room_id, room_name, task_id, agents_str)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_room(room_id):
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM rooms WHERE room_id = ?", (room_id,)).fetchone()
+        if row:
+            res = dict(row)
+            res['allowed_agents'] = json.loads(res['allowed_agents'])
+            return res
+        return None
+    finally:
+        conn.close()
+
+def update_room_turn_count(room_id, turn_count):
+    conn = get_db_connection()
+    try:
+        conn.execute("UPDATE rooms SET turn_count = ? WHERE room_id = ?", (turn_count, room_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+def close_room(room_id):
+    conn = get_db_connection()
+    try:
+        conn.execute("UPDATE rooms SET is_active = 0 WHERE room_id = ?", (room_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def add_message(room_id, sender_role, content, payload_type="TEXT"):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO messages (room_id, sender_role, content, payload_type, is_archived) VALUES (?, ?, ?, ?, 0)",
+            (room_id, sender_role, content, payload_type)
+        )
+        
+        # Automatically increment room turn count for non-system messages
+        if sender_role != "System" and sender_role != "Blinky_Observer":
+            cursor.execute("UPDATE rooms SET turn_count = turn_count + 1 WHERE room_id = ?", (room_id,))
+            
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+def get_room_messages(room_id, include_archived=False):
+    conn = get_db_connection()
+    try:
+        if include_archived:
+            rows = conn.execute(
+                "SELECT * FROM messages WHERE room_id = ? ORDER BY created_at ASC",
+                (room_id,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM messages WHERE room_id = ? AND is_archived = 0 ORDER BY created_at ASC",
+                (room_id,)
+            ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+def archive_room_messages(room_id):
+    conn = get_db_connection()
+    try:
+        conn.execute("UPDATE messages SET is_archived = 1 WHERE room_id = ?", (room_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def seed_agent_penalties(agents):
+    conn = get_db_connection()
+    try:
+        for agent in agents:
+            conn.execute(
+                "INSERT OR IGNORE INTO agent_penalties (agent_name, warning_count, is_penalized) VALUES (?, 0, 0)",
+                (agent,)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_agent_penalty(agent_name):
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM agent_penalties WHERE agent_name = ?", (agent_name,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+def increment_agent_warning(agent_name, reason):
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT warning_count FROM agent_penalties WHERE agent_name = ?", (agent_name,)).fetchone()
+        if row:
+            new_warnings = row['warning_count'] + 1
+            is_penalized = 1 if new_warnings >= 3 else 0
+            conn.execute(
+                "UPDATE agent_penalties SET warning_count = ?, is_penalized = ?, last_penalty_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE agent_name = ?",
+                (new_warnings, is_penalized, reason, agent_name)
+            )
+            conn.commit()
+            return {"warning_count": new_warnings, "is_penalized": is_penalized}
+        return None
+    finally:
+        conn.close()

@@ -1,0 +1,9 @@
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+.idea/
+.vscode/
+venv/
+.venv/
