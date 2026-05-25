@@ -36,5 +36,3 @@ DISCORD_WEBHOOK_URL = get_config("DISCORD_WEBHOOK_URL", "")
 # Derived Endpoint URLs
 OLLAMA_GENERATE_URL = f"{OLLAMA_API_URL.rstrip('/')}/api/generate"
 OLLAMA_CHAT_URL = f"{OLLAMA_API_URL.rstrip('/')}/api/chat"
-
-print(f"⚙️ [Config Settings] Port: {PORT} | Ollama: {OLLAMA_API_URL} | Webhook: {'Loaded' if DISCORD_WEBHOOK_URL else 'Missing'}")

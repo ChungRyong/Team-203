@@ -10,7 +10,7 @@ from app.database import (
 )
 from app.discord_relay import send_discord_log
 
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
+from config.settings import OLLAMA_GENERATE_URL
 MODEL_NAME = "gemma4:4b"
 
 def call_blinky_summarizer(transcript_str):
@@ -38,7 +38,7 @@ def call_blinky_summarizer(transcript_str):
     }
     
     try:
-        response = requests.post(OLLAMA_API_URL, json=payload, timeout=20)
+        response = requests.post(OLLAMA_GENERATE_URL, json=payload, timeout=20)
         if response.status_code == 200:
             result = response.json()
             return result.get("response", "").strip()

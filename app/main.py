@@ -11,6 +11,7 @@ from app import database
 from app.database import run_git_snapshot
 from app.blinky_middleware import check_and_compress_context
 from app.penalties import enforce_penalty_check, get_agent_system_prompt, enforce_pardon_agent
+from config.settings import OLLAMA_CHAT_URL
 
 app = FastAPI(
     title="Team-203 Virtual Office Meeting Room Engine",
@@ -273,7 +274,7 @@ def unload_vram(req: VramUnloadRequest):
     Sends a POST request to Ollama's API with keep_alive set to 0.
     """
     import requests
-    ollama_chat_url = "http://localhost:11434/api/chat"
+    ollama_chat_url = OLLAMA_CHAT_URL
     payload = {
         "model": req.model,
         "messages": [],

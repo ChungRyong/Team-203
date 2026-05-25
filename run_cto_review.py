@@ -5,9 +5,6 @@ import ast
 import requests
 import subprocess
 
-API_URL_PENALIZE = "http://localhost:20300/api/agents/Dev-Agent/penalize"
-API_URL_TASKS = "http://localhost:20300/api/tasks"
-
 # Use environment variable to toggle base URL or fallback to standard port
 PORT = os.environ.get("TEAM203_PORT", "8000")
 API_URL_PENALIZE = f"http://localhost:{PORT}/api/agents/Dev-Agent/penalize"
@@ -39,7 +36,7 @@ def get_function_line_count(node, source_lines):
         # Find where docstring begins within the function
         # Typically the first node in body is a Expr containing a Constant/Str
         for body_node in node.body:
-            if isinstance(body_node, ast.Expr) and isinstance(body_node.value, (ast.Constant, ast.Str)):
+            if isinstance(body_node, ast.Expr) and isinstance(body_node.value, ast.Constant):
                 ds_start = body_node.lineno - 1
                 ds_end = body_node.end_lineno
                 for idx in range(ds_start, ds_end):

@@ -1,7 +1,7 @@
 import requests
 import os
 
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+from config.settings import DISCORD_WEBHOOK_URL
 
 def send_discord_log(content, title="🚨 [Blinky System Log]", color=16711680):
     """
