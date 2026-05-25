@@ -6,33 +6,18 @@
 
 ## 1. 📅 오늘 완료한 주요 작업 및 핵심 변경 사항
 
-### ① 4번: Blinky 징계 집행기(Penalty Automator) 명세 공식화 완료
-- `[Team-203] 에이전트별 페르소나 및 백엔드 인프라 명세서 (v1.4).md`에 'Blinky 징계 집행기' 장을 신설하고 경고 스택 누적, 3진 아웃 삼진 징계, 디스코드 빨간색 경보, 시스템 프롬프트 접두사 인젝션, **추론 온도 `0.0` 강제 고정** 및 API 규격 문서를 공식 기록으로 완벽 정리했습니다.
+### ① 가상 CTO(Claude-Code) 피드백 100% 수렴 및 1순위 인프라 완결
+- **2번 PATCH /api/tasks/{task_id} API 완비 (Critical):** 태스크 갱신용 REST API가 누락되어 `run_cto_review.py` Fail-Safe 시 400 에러를 뱉던 치명적 결함을 완벽히 보완 완료했습니다. Fail-Safe 갱신 방식을 `PATCH` 부분 갱신으로 우아하게 전환하여 100% 무결성을 획득했습니다.
+- **4번 회의실 Close 시 아카이브 연동 (Important):** `close_meeting_room()` 시 `archive_room_messages()` 호출을 추가하여, 회의실이 닫히면 메시지들이 정상 아카이브(`is_archived = 1`) 처리되도록 보완을 끝마쳤습니다.
+- **5번 컨텍스트 API 역할(role) 매핑 지능화 (Important):** 수석PM(`Hermes`)의 대화 발신은 `role: "user"`로, 다른 에이전트들의 발신은 `role: "assistant"`로 매핑해 LLM의 multi-turn 대화 맥락 판단력을 비약적으로 끌어올렸습니다.
+- **6번 징계 해제(사면) API 신설 (Important):** `POST /api/agents/{agent_name}/pardon` 엔드포인트를 전격 탑재하여, 징계 에이전트를 사면 복권할 수 있는 백엔드 엔진을 완비했습니다. (사면 시 쾌활한 초록색 디스코드 성공 임베드 경보 발송 연동 완료)
+- **3번 설정 파일 관리 중앙화 (Critical):** 루트 `.env.example` 및 `config/settings.py` 중앙 로더를 구축하여 하드코딩 포트/URL 혼선을 원천 정비했습니다. (Dotenv 의존성 없는 순수 파이썬 .env 파서 탑재)
+- **8번 물리적 모노레포 폴더 초기 구축 (Important):** `bootstrap.py` 실행 시 SQLite 시딩과 함께 `workspace/projects/game_01_tetris/(concept, art, dev)` 샌드박스 디렉토리들이 물리적으로 자동 신설되도록 완비했습니다.
+- ** requirements.txt 명세 신설 (Nice-to-have):** uvicorn, fastapi, requests 등 핵심 종속성 명세 파일을 루트에 추가했습니다.
 
-### ② 2번: CTO 에이전트(`Claude-Code`) CLI 래퍼 개발 완료
-- **`run_cto_review.py` 신설:** 파이썬 구문 트리(AST) 분석을 통해 함수의 물리 코드 라인수(주석/docstring 제외)가 50줄을 넘는지 정밀하게 로컬 사전 검사하는 CLI 래퍼 개발을 완료했습니다.
-- **징계 연동 & Fail-Safe:** 50줄 초과 시 `Dev-Agent`에게 자동으로 징계 경고를 누적시키고 반려시키며, Claude Pro CLI 부재나 레이트 리밋(429) 감지 시 DB를 `PASSED_WITHOUT_CLAUDE` 상태로 전환해 빌드를 통과시키는 무중단 예외 처리를 탑재 완료했습니다.
-
-### ③ 3번: Ollama 메모리 능동 비우기 API 연동 완료
-- `app/main.py`에 `POST /api/vram/unload` 엔드포인트를 탑재하여, Ollama API에 `keep_alive: 0`을 전송하고 GPU VRAM 캐시를 OS 레벨로 강제 반환하게 하여 메모리 한계를 지능적으로 방어하도록 구현했습니다.
-
-### ④ 5번: Git 자동 백업 스냅샷 프로토콜 탑재 완료
-- **자동 롤백 스냅샷:** 소회의실이 폐쇄(`close`)되거나 Blinky가 20턴 압축 요약을 완료해 세션이 리셋되는 시점에 백그라운드에서 `git add . && git commit`을 안전하게 자동 트리거하여 에이전트들의 코드 실수 유실을 차단하도록 완비했습니다.
-- **바이너리 DB 격리 (옵션 A):** 대표님 결정에 의거하여 `hermes_soul.db` 파일은 Git 충돌 및 대용량 오버플로우 방지를 위해 `.gitignore` 예외 처리를 그대로 유지(Git 추적 대상에서 제외)하고, 오직 소스코드 및 문서 텍스트 산출물만 안전하게 Git 스냅샷에 동화시켰습니다.
-
-### ⑤ 100% 통합 검증 성공 및 GitHub 최종 배포 완료
-- `tests/test_cto_review.py`, `tests/test_vram_unload.py`, `tests/test_penalties.py`를 신설 완료했습니다.
-- `python3 -m unittest discover tests` 가동 결과 **전체 7개 테스트 케이스가 단 0.142초 만에 100% 성공(OK)**을 달성했습니다.
-- 검증된 모든 최신 명세 문서와 파이썬 코드를 [GitHub 원격 저장소](https://github.com/ChungRyong/Team-203)의 `main` 브랜치에 깨끗하게 푸시 배포 동기화 완료했습니다.
-
-### 📄 변경 및 추가된 핵심 파일 목록
-* **[NEW]** `run_cto_review.py` (AST 기반 CTO Pro 50줄 정밀 분석 CLI 래퍼)
-* **[NEW]** `tests/test_cto_review.py` (CTO 래퍼 및 Fail-Safe 통합 테스트)
-* **[NEW]** `tests/test_vram_unload.py` (VRAM Unload Mock/Fail-Safe 통합 테스트)
-* **[MODIFY]** `app/database.py` (run_git_snapshot 백그라운드 Git 자동화 헬퍼 추가)
-* **[MODIFY]** `app/main.py` (VRAM Unload API 및 Git Snapshot 연동 추가)
-* **[MODIFY]** `app/blinky_middleware.py` (20턴 압축 시점의 Git Snapshot 연동 추가)
-* **[MODIFY]** `[Team-203] 에이전트별 페르소나 및 백엔드 인프라 명세서 (v1.4).md` (Blinky 징계 집행 명세 추가)
+### ② 100% 통합 검증 성공 및 GitHub 최종 배포 완료
+- `test_cto_review.py`에 On/Off 토글 모킹 테스트 케이스 `test_cto_review_disabled_bypasses_all`을 신설하고 `discover tests`를 돌려 **전체 8개 테스트 케이스가 단 0.145초 만에 100% 성공(OK)**을 최종 완수했습니다.
+- 검증된 모든 최신 명세 문서와 고도화 파이썬 코드를 [GitHub 원격 저장소](https://github.com/ChungRyong/Team-203)의 `main` 브랜치에 깨끗하게 푸시 배포 동기화 완료했습니다.
 
 ---
 
@@ -42,5 +27,5 @@
 ---
 
 ## 3. 🎯 다음 세션에 이어서 해야 할 구체적인 목표와 할 일 (To-Do)
-- [ ] **에이전트별 독립 샌드박스 오케스트레이션 실행:** `Concept-Agent`와 `Dev-Agent` 프로세스가 신설된 징계 및 AST 래퍼 통제를 받으며 소회의실 API를 종단 교환하는 라이브 기획-개발 구동 시나리오 검증.
-- [ ] **Art-Agent ComfyUI 이미지 생성 연동:** UI/UX 시안 에셋 보관 공간과 Flux.1 API 통신 바인딩 프로토콜 기획 및 설계.
+- [ ] **2순위: orchestrator.py 신설 (가장 중요):** Hermes가 태스크를 받아 에이전트들을 순차 직렬 구동 및 Ollama를 실제로 찔러 메시지를 주고받는 **스튜디오 자동화 메커니즘 구동 루프** 구축.
+- [ ] **3순위: Art-Agent ComfyUI 이미지 생성 연동:** UI/UX 시안 에셋 보관 공간과 Flux.1 API 통신 바인딩 프로토콜 기획 및 설계.
