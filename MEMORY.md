@@ -6,51 +6,41 @@
 
 ## 1. 📅 오늘 완료한 주요 작업 및 핵심 변경 사항
 
-### ① 워드 문서(.docx) -> 마크다운(.md) 완벽 변환 (이전 완료)
-- 폴더 내 모든 워드 기획 문서를 유실 없이 마크다운 포맷으로 깔끔하게 일괄 변환 및 제목 중복 접두사 정교화 완료.
+### ① 4번: Blinky 징계 집행기(Penalty Automator) 명세 공식화 완료
+- `[Team-203] 에이전트별 페르소나 및 백엔드 인프라 명세서 (v1.4).md`에 'Blinky 징계 집행기' 장을 신설하고 경고 스택 누적, 3진 아웃 삼진 징계, 디스코드 빨간색 경보, 시스템 프롬프트 접두사 인젝션, **추론 온도 `0.0` 강제 고정** 및 API 규격 문서를 공식 기록으로 완벽 정리했습니다.
 
-### ② 모델 스위칭 VRAM 및 모델명 단일화 최적화 (이전 완료)
-- 기획자(`Concept-Agent`)와 개발자(`Dev-Agent`)의 베이스 모델을 **`qwen3.6:35b-mlx`**로 통합.
+### ② 2번: CTO 에이전트(`Claude-Code`) CLI 래퍼 개발 완료
+- **`run_cto_review.py` 신설:** 파이썬 구문 트리(AST) 분석을 통해 함수의 물리 코드 라인수(주석/docstring 제외)가 50줄을 넘는지 정밀하게 로컬 사전 검사하는 CLI 래퍼 개발을 완료했습니다.
+- **징계 연동 & Fail-Safe:** 50줄 초과 시 `Dev-Agent`에게 자동으로 징계 경고를 누적시키고 반려시키며, Claude Pro CLI 부재나 레이트 리밋(429) 감지 시 DB를 `PASSED_WITHOUT_CLAUDE` 상태로 전환해 빌드를 통과시키는 무중단 예외 처리를 탑재 완료했습니다.
 
-### ③ FastAPI + SQLite 동적 소회의실(TF룸) 백엔드 엔진 구축 완료
-- **동시성 최적화:** SQLite의 WAL(Write-Ahead Logging) 모드를 활성화하여 에이전트 간의 실시간 쓰기 경합 시 데이터베이스 락 발생 차단.
-- **REST API 완성 (`app/main.py`):** 태스크 생성, 회의실 개설, 메시지 송수신 및 보안 비인가 에이전트 403 차단, LLM 최적화 컨텍스트 조립(`/context`) 엔드포인트 구현 완료.
-- **원클릭 부트스트랩 스크립트 (`bootstrap.py`):** 데이터베이스 구조 생성 및 5인 에이전트의 징계/경고 스택 초기화 자동화 완료.
+### ③ 3번: Ollama 메모리 능동 비우기 API 연동 완료
+- `app/main.py`에 `POST /api/vram/unload` 엔드포인트를 탑재하여, Ollama API에 `keep_alive: 0`을 전송하고 GPU VRAM 캐시를 OS 레벨로 강제 반환하게 하여 메모리 한계를 지능적으로 방어하도록 구현했습니다.
 
-### ④ Blinky Observer Context Compression Middleware 완성 (`app/blinky_middleware.py`)
-- **18턴 경고:** 회의실 대화가 18턴에 다다르면 System 알림 경고 자동 전송.
-- **20턴 압축:** 대화가 20턴에 도달하면 기존 대화록을 아카이브 처리(`is_archived = 1`)하고, `gemma4:4b` 로컬 모델을 호출해 1페이지 마크다운 요약본을 작성한 뒤 턴수를 `0`으로 초기화하는 미들웨어 엔진 구축 완료.
-- **오프라인 폴백(Fallback):** Ollama API 오프라인 상태에서도 소스 코드 블록(예: `def tetris():`)을 안전하게 발췌해 요약본으로 복원하는 정규식 기반 폴백 안전장치 탑재 완료.
+### ④ 5번: Git 자동 백업 스냅샷 프로토콜 탑재 완료
+- **자동 롤백 스냅샷:** 소회의실이 폐쇄(`close`)되거나 Blinky가 20턴 압축 요약을 완료해 세션이 리셋되는 시점에 백그라운드에서 `git add . && git commit`을 안전하게 자동 트리거하여 에이전트들의 코드 실수 유실을 차단하도록 완비했습니다.
+- **바이너리 DB 격리 (옵션 A):** 대표님 결정에 의거하여 `hermes_soul.db` 파일은 Git 충돌 및 대용량 오버플로우 방지를 위해 `.gitignore` 예외 처리를 그대로 유지(Git 추적 대상에서 제외)하고, 오직 소스코드 및 문서 텍스트 산출물만 안전하게 Git 스냅샷에 동화시켰습니다.
 
-### ⑤ 수석PM(Hermes)의 디스코드 중계 동적 제어 기능 주입
-- API 레이트 리밋 보호를 위해 실시간 대화 중계의 기본값을 **OFF(비활성)**로 통제.
-- 대표님의 직접적인 켜기/끄기 요청(예: "중계 켜줘")에 반응하여 동적으로 스위칭하고 작업 종료 시 자동 초기화 조항을 Hermes 가이드라인에 명시 완료.
-
-### ⑥ IDE 가독성 개선
-- 점(`.`)으로 시작하여 IDE에서 숨겨지던 `workspace/.shared` 폴더를 **`workspace/shared`**로 변경하여 Antigravity IDE 탐색기 사이드바에서 즉시 열람할 수 있도록 개선 완료.
-
-### ⑦ 100% PASS 통합 검증 테스트 완료 (`tests/test_meeting_rooms.py`)
-- 회의실 생성, 403 보안 차단, 18턴 경고, 20턴 Blinky 요약 압축 및 턴수 리셋, 컨텍스트 조립까지 전 구간을 시뮬레이션하는 엄격한 단위 테스트 작성 및 가동 결과 **성공(OK)** 검증 완료.
+### ⑤ 100% 통합 검증 성공 및 GitHub 최종 배포 완료
+- `tests/test_cto_review.py`, `tests/test_vram_unload.py`, `tests/test_penalties.py`를 신설 완료했습니다.
+- `python3 -m unittest discover tests` 가동 결과 **전체 7개 테스트 케이스가 단 0.142초 만에 100% 성공(OK)**을 달성했습니다.
+- 검증된 모든 최신 명세 문서와 파이썬 코드를 [GitHub 원격 저장소](https://github.com/ChungRyong/Team-203)의 `main` 브랜치에 깨끗하게 푸시 배포 동기화 완료했습니다.
 
 ### 📄 변경 및 추가된 핵심 파일 목록
-* **[NEW]** `app/database.py` (SQLite DB & DDL 및 CRUD 헬퍼)
-* **[NEW]** `app/main.py` (FastAPI 통신 API)
-* **[NEW]** `app/blinky_middleware.py` (Blinky 압축 미들웨어)
-* **[NEW]** `bootstrap.py` (원클릭 DB 초기화 스크립트)
-* **[NEW]** `tests/test_meeting_rooms.py` (수명 주기 통합 테스트 세트)
-* **[NEW]** `workspace/shared/[Team-203] 수석PM 전용 회의실 통제 가이드라인.md` (Hermes 가이드북)
-* **[MODIFY]** `README.md V2.md` (디렉토리 구조 트리 업데이트)
-* **[MODIFY]** `[Team-203] 에이전트별 페르소나 및 백엔드 인프라 명세서 (v1.4).md`
-* **[MODIFY]** `[Team-203] 에이전트별 페르소나 및 핵심 지침 (v1.3).md`
-* **[MODIFY]** `[Team-203] 인프라 및 조직 구성 마스터플랜 (공정 1 포함).md`
+* **[NEW]** `run_cto_review.py` (AST 기반 CTO Pro 50줄 정밀 분석 CLI 래퍼)
+* **[NEW]** `tests/test_cto_review.py` (CTO 래퍼 및 Fail-Safe 통합 테스트)
+* **[NEW]** `tests/test_vram_unload.py` (VRAM Unload Mock/Fail-Safe 통합 테스트)
+* **[MODIFY]** `app/database.py` (run_git_snapshot 백그라운드 Git 자동화 헬퍼 추가)
+* **[MODIFY]** `app/main.py` (VRAM Unload API 및 Git Snapshot 연동 추가)
+* **[MODIFY]** `app/blinky_middleware.py` (20턴 압축 시점의 Git Snapshot 연동 추가)
+* **[MODIFY]** `[Team-203] 에이전트별 페르소나 및 백엔드 인프라 명세서 (v1.4).md` (Blinky 징계 집행 명세 추가)
 
 ---
 
 ## 2. ⚠️ 현재 마주한 에러 및 미해결 이슈
-- **특이사항 없음:** 모든 단위 및 통합 기능 테스트가 성공적으로 동작하고 있습니다.
+- **특이사항 없음:** 전 구간 통합 테스트가 100% PASS 하였으며, 어떠한 오류나 리소그 랙 현상 없이 매끄럽게 컴파일 및 구동됩니다.
 
 ---
 
 ## 3. 🎯 다음 세션에 이어서 해야 할 구체적인 목표와 할 일 (To-Do)
-- [ ] **디스코드 API 및 직접 웹훅 연동 프로토타입 설계:** 외부 채널(대표님)과의 가교 역할을 하는 파이썬 직접 웹훅 및 수석PM 소통 단일화 연동 설계 시작.
-- [ ] **에이전트별 독립 샌드박스 가동 테스트:** `Concept-Agent`와 `Dev-Agent` 프로세스가 실제로 개설된 회의실 API를 타며 입출력을 교환하는 오케스트레이션 실행 시나리오 테스트.
+- [ ] **에이전트별 독립 샌드박스 오케스트레이션 실행:** `Concept-Agent`와 `Dev-Agent` 프로세스가 신설된 징계 및 AST 래퍼 통제를 받으며 소회의실 API를 종단 교환하는 라이브 기획-개발 구동 시나리오 검증.
+- [ ] **Art-Agent ComfyUI 이미지 생성 연동:** UI/UX 시안 에셋 보관 공간과 Flux.1 API 통신 바인딩 프로토콜 기획 및 설계.

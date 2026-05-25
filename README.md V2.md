@@ -34,10 +34,9 @@ M5 Max 128GB 단일 머신 기반, 보안 유출 및 토큰 비용이 없는 **1
 ├── config/                    # 공통 환경 변수 (.env)
 ├── database/                  # 수석PM 영속성 및 로컬 채팅 DB (hermes_soul.db)
 └── workspace/                 # ★ 에이전트 격리 작업 공간
-    ├── shared/                # 읽기 전용 공통 명세 가이드라인
-    ├── concept_sandbox/       # [시니어 기획자] Markdown 기획서 작성 구역
-    ├── art_sandbox/           # [테크니컬 아티스트] Flux.1 생성 에셋 보관 구역
-    └── dev_sandbox/           # [수석 엔지니어] VS Code CLI 연동 소스코드(src) 및 테스트(tests) 구역
+    ├── shared/                # 표준 가이드라인 및 공통 라이브러리/템플릿 보존 구역
+    └── projects/              # 🎮 개별 게임 프로젝트 격리 모노레포 영역
+        └── game_01_tetris/    # 각 프로젝트 독립 샌드박스 (concept/, art/, dev/)
 
 
 ## 5. [공정 2] 에이전트 Git 브랜치 운용 및 형상 관리 규칙
