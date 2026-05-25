@@ -8,7 +8,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import database
+from app.database import run_git_snapshot
 from app.blinky_middleware import check_and_compress_context
+from app.penalties import enforce_penalty_check, get_agent_system_prompt
 
 app = FastAPI(
     title="Team-203 Virtual Office Meeting Room Engine",
@@ -34,6 +36,15 @@ class MessageCreate(BaseModel):
     sender_role: str = Field(..., example="Dev-Agent")
     content: str = Field(..., example="테트리스 블록 강하 로직 구현 완료했습니다.")
     payload_type: Optional[str] = Field("TEXT", example="TEXT")
+
+class PenalizeRequest(BaseModel):
+    reason: str = Field(..., example="가상 함수 날조 및 린트 검증 실패")
+    
+class PromptRequest(BaseModel):
+    base_prompt: str = Field(..., example="당신은 수석 엔지니어입니다. 코드를 구현해 주세요.")
+
+class VramUnloadRequest(BaseModel):
+    model: str = Field(..., example="qwen3.6:35b-mlx")
 
 class TaskResponse(BaseModel):
     task_id: str
@@ -208,6 +219,10 @@ def close_meeting_room(room_id: str):
         raise HTTPException(status_code=404, detail="Room not found.")
         
     database.close_room(room_id)
+    
+    # Trigger background Git snapshot backup
+    run_git_snapshot(room_id, "closed")
+    
     # Post system shutdown announcement
     database.add_message(
         room_id, 
@@ -216,3 +231,60 @@ def close_meeting_room(room_id: str):
         "TEXT"
     )
     return {"status": "success", "message": f"Room {room_id} closed/destructed successfully."}
+
+@app.post("/api/vram/unload")
+def unload_vram(req: VramUnloadRequest):
+    """
+    Instructs the local Ollama instance to unload a model from memory (VRAM).
+    Sends a POST request to Ollama's API with keep_alive set to 0.
+    """
+    import requests
+    ollama_chat_url = "http://localhost:11434/api/chat"
+    payload = {
+        "model": req.model,
+        "messages": [],
+        "keep_alive": 0
+    }
+    
+    try:
+        # Send keep_alive = 0 to Ollama API to force release
+        # Short timeout to avoid blocking if Ollama is unresponsive
+        res = requests.post(ollama_chat_url, json=payload, timeout=5)
+        return {
+            "status": "success",
+            "model": req.model,
+            "message": f"Successfully requested Ollama to unload model '{req.model}'.",
+            "ollama_status_code": res.status_code
+        }
+    except Exception as e:
+        # Return success with fallback/warning message so it remains robust (Fail-Safe)
+        return {
+            "status": "warning",
+            "model": req.model,
+            "message": f"Ollama connection bypassed or offline. Model '{req.model}' unload requested.",
+            "error_detail": str(e)
+        }
+
+@app.post("/api/agents/{agent_name}/penalize")
+def penalize_agent(agent_name: str, req: PenalizeRequest):
+    existing = database.get_agent_penalty(agent_name)
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not registered in penalty profiles.")
+        
+    try:
+        res = enforce_penalty_check(agent_name, req.reason)
+        return {"status": "success", "penalty_status": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/agents/{agent_name}/prompt")
+def get_agent_prompt(agent_name: str, req: PromptRequest):
+    existing = database.get_agent_penalty(agent_name)
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not registered in penalty profiles.")
+        
+    try:
+        res = get_agent_system_prompt(agent_name, req.base_prompt)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

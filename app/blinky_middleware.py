@@ -5,7 +5,8 @@ from app.database import (
     get_room_messages,
     add_message,
     archive_room_messages,
-    update_room_turn_count
+    update_room_turn_count,
+    run_git_snapshot
 )
 from app.discord_relay import send_discord_log
 
@@ -141,6 +142,9 @@ def check_and_compress_context(room_id):
         
         # Reset turn_count to 0
         update_room_turn_count(room_id, 0)
+        
+        # Trigger background Git snapshot backup
+        run_git_snapshot(room_id, "compressed")
         
         # Post success system notification
         success_msg = (

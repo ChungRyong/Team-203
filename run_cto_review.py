@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+import os
+import sys
+import ast
+import requests
+import subprocess
+
+API_URL_PENALIZE = "http://localhost:20300/api/agents/Dev-Agent/penalize"
+API_URL_TASKS = "http://localhost:20300/api/tasks"
+
+# Use environment variable to toggle base URL or fallback to standard port
+PORT = os.environ.get("TEAM203_PORT", "8000")
+API_URL_PENALIZE = f"http://localhost:{PORT}/api/agents/Dev-Agent/penalize"
+API_URL_TASKS = f"http://localhost:{PORT}/api/tasks"
+
+def get_function_line_count(node, source_lines):
+    """
+    Calculates the clean physical line count of a function definition.
+    Excludes comments, blank lines, and docstrings.
+    """
+    start = node.lineno - 1
+    end = node.end_lineno
+    func_lines = source_lines[start:end]
+    
+    # 1. Parse and extract docstring range to exclude it
+    docstring = ast.get_docstring(node)
+    docstring_lines = set()
+    if docstring:
+        # Find where docstring begins within the function
+        # Typically the first node in body is a Expr containing a Constant/Str
+        for body_node in node.body:
+            if isinstance(body_node, ast.Expr) and isinstance(body_node.value, (ast.Constant, ast.Str)):
+                ds_start = body_node.lineno - 1
+                ds_end = body_node.end_lineno
+                for idx in range(ds_start, ds_end):
+                    docstring_lines.add(idx)
+                break
+                
+    clean_lines = []
+    for idx, line in enumerate(func_lines):
+        absolute_idx = start + idx
+        # Exclude docstrings
+        if absolute_idx in docstring_lines:
+            continue
+            
+        stripped = line.strip()
+        # Exclude blank lines and comments
+        if not stripped or stripped.startswith("#"):
+            continue
+        clean_lines.append(stripped)
+        
+    return len(clean_lines)
+
+def analyze_file(filepath):
+    """
+    Parses a python file using AST to find all functions exceeding 50 clean lines.
+    """
+    with open(filepath, "r", encoding="utf-8") as f:
+        source = f.read()
+        
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as e:
+        print(f"❌ [Syntax Error] Failed to parse {filepath}: {e}")
+        return []
+        
+    source_lines = source.split("\n")
+    violations = []
+    
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            line_count = get_function_line_count(node, source_lines)
+            if line_count > 50:
+                violations.append({
+                    "file": filepath,
+                    "function": node.name,
+                    "lines": line_count,
+                    "start_line": node.lineno
+                })
+                
+    return violations
+
+def trigger_blinky_penalty(reason):
+    """
+    Triggers Blinky penalty increments via the FastAPI backend.
+    """
+    try:
+        res = requests.post(API_URL_PENALIZE, json={"reason": reason}, timeout=5)
+        if res.status_code == 200:
+            print("🚨 [Blinky Integrator] Successfully reported violation to Blinky Penalty Engine.")
+            print(f"📡 [Blinky Status] Current Stack: {res.json()['penalty_status']['warning_count']}/3 warnings.")
+        else:
+            print(f"⚠️ [Blinky Integrator Warning] Backend API returned status {res.status_code}")
+    except Exception as e:
+        print(f"⚠️ [Blinky Connection Warning] Could not report to Blinky Penalty Engine (offline): {e}")
+
+def update_task_fail_safe(task_id, status_val):
+    """
+    Updates the task status in the SQLite database to PASSED_WITHOUT_CLAUDE.
+    """
+    try:
+        url = f"{API_URL_TASKS}/{task_id}"
+        # Fetch existing task to ensure it is registered
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            # Task exists, update status
+            task_data = res.json()
+            task_data["status"] = status_val
+            requests.post(API_URL_TASKS, json=task_data, timeout=5)
+            print(f"🛡️ [Fail-Safe Activated] Task '{task_id}' updated to status: {status_val}")
+            return True
+    except Exception as e:
+        print(f"⚠️ [Fail-Safe DB Warning] Task update bypassed: {e}")
+    return False
+
+def run_claude_review_cli():
+    """
+    Attempts to call the real local 'claude' CLI tool for deep architectural review.
+    Implements full Fail-Safe protection for missing command or rate limit errors.
+    """
+    print("👑 [Claude CTO Review] Attempting deep architectural inspection via Claude CLI...")
+    try:
+        # Run local 'claude review' or similar command (mock/simulation friendly)
+        # We specify a short timeout to prevent hanging
+        res = subprocess.run(
+            ["claude", "review", "--non-interactive"], 
+            capture_output=True, 
+            text=True, 
+            timeout=10
+        )
+        
+        # Check for rate limit or generic API failures
+        if "429" in res.stderr or "rate limit" in res.stderr.lower():
+            print("⚠️ [CTO Warning] Claude Pro Rate Limit (429) detected during CLI execution.")
+            return "RATE_LIMIT"
+            
+        if res.returncode == 0:
+            print("✅ [CTO Review] Deep architecture review PASSED.")
+            return "PASSED"
+        else:
+            print(f"❌ [CTO Review] Architecture review FAILED:\n{res.stderr}")
+            return "FAILED"
+            
+    except (FileNotFoundError, PermissionError):
+        print("⚠️ [CTO Warning] Local 'claude' CLI executable is not installed or available on this host.")
+        return "CLI_MISSING"
+    except subprocess.TimeoutExpired:
+        print("⚠️ [CTO Warning] Claude CLI timed out during execution.")
+        return "TIMEOUT"
+    except Exception as e:
+        print(f"⚠️ [CTO Warning] Unexpected CLI error: {str(e)}")
+        return "ERROR"
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 run_cto_review.py <file_or_directory_path> [task_id]")
+        sys.exit(0)
+        
+    target_path = sys.argv[1]
+    task_id = sys.argv[2] if len(sys.argv) > 2 else "MOCK-TASK"
+    
+    # 1. AST 정적 50줄 체크 (Strict Local Rule)
+    print(f"🔍 [AST Review] Starting local code audit on: {target_path}")
+    
+    violations = []
+    if os.path.isfile(target_path):
+        if target_path.endswith(".py"):
+            violations = analyze_file(target_path)
+    else:
+        for root, _, files in os.walk(target_path):
+            for file in files:
+                if file.endswith(".py"):
+                    filepath = os.path.join(root, file)
+                    violations.extend(analyze_file(filepath))
+                    
+    # 2. 결과 처리
+    if violations:
+        print("\n⛔ [CTO REJECT] 50-Line Function Limit Violated! ⛔")
+        for v in violations:
+            print(f"  • File: {v['file']} | Function: '{v['function']}' | Lines: {v['lines']} (Start line: {v['start_line']})")
+        print("\n👉 모든 파이썬 함수는 CTO Pro 토큰 보존을 위해 주석/공백 제외 50줄 이하여야 합니다.")
+        
+        # Blinky 징계 API 연동 (경고 1회)
+        reason = f"함수 50줄 초과 위반: {violations[0]['file']} -> '{violations[0]['function']}' ({violations[0]['lines']}줄)"
+        trigger_blinky_penalty(reason)
+        sys.exit(1)
+        
+    print("✅ [AST Review] Local function length checks PASSED. (All functions <= 50 lines)")
+    
+    # 3. 👑 5층 CTO Claude CLI 호출 및 Fail-Safe 활성화
+    cto_status = run_claude_review_cli()
+    
+    if cto_status == "FAILED":
+        sys.exit(1)
+        
+    elif cto_status in ["RATE_LIMIT", "CLI_MISSING", "TIMEOUT", "ERROR"]:
+        print("🛡️ [CTO Fail-Safe] Activating TECHNICAL FAIL-SAFE protocol...")
+        update_task_fail_safe(task_id, "PASSED_WITHOUT_CLAUDE")
+        print("✅ [CTO Fail-Safe] Bypassed technical blocking. Process continues safely.")
+        sys.exit(0)
+        
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

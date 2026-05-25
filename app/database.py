@@ -221,3 +221,33 @@ def increment_agent_warning(agent_name, reason):
         return None
     finally:
         conn.close()
+
+def run_git_snapshot(room_id: str, action_type: str):
+    """
+    Executes an automated background Git snapshot.
+    Runs 'git add .' and 'git commit -m' to capture intermediate or final state.
+    Gracefully bypasses any Git error (e.g. nothing to commit or lock issues) without blocking.
+    """
+    try:
+        import subprocess
+        # Determine working directory to be the workspace root
+        cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # 1. git add .
+        subprocess.run(["git", "add", "."], cwd=cwd, check=True, capture_output=True)
+        
+        # 2. git commit -m
+        commit_msg = f"Auto-backup TF-Room [{room_id}] checkpoint ({action_type})"
+        res = subprocess.run(["git", "commit", "-m", commit_msg], cwd=cwd, check=True, capture_output=True)
+        
+        print(f"📦 [Git Snapshot] Backup successful: {commit_msg}")
+        return True
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode().strip() if e.stderr else "No stderr"
+        # Often occurs when there is nothing to commit, which is a success from our pipeline perspective.
+        print(f"📡 [Git Snapshot Info] Bypassed: {stderr_msg}")
+        return False
+    except Exception as e:
+        print(f"🚨 [Git Snapshot Error] Unexpected git error bypassed: {str(e)}")
+        return False
+
