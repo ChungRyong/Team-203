@@ -7,6 +7,7 @@ from app.database import (
     archive_room_messages,
     update_room_turn_count
 )
+from app.discord_relay import send_discord_log
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "gemma4:4b"
@@ -147,6 +148,14 @@ def check_and_compress_context(room_id):
             "성공적으로 요약 압축하고 대화 세션을 리프레시했습니다. 새로운 요약을 이정표 삼아 대화를 계속 재개합니다."
         )
         add_message(room_id, "System", success_msg, "TEXT")
+        
+        # Send direct python Discord webhook report in fallback or standard mode (Option A bypass)
+        send_discord_log(
+            summary_text, 
+            title=f"📈 [Blinky PM Report] Room '{room_id}' Context Compressed", 
+            color=3447003 # Nice Blue color for summaries
+        )
+        
         print(f"✅ [Blinky Observer] Room {room_id} context successfully compressed and reset to 0 turns.")
         return True
         

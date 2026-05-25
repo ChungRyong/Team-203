@@ -19,7 +19,7 @@ M5 Max 128GB 단일 머신 기반, 보안 유출 및 토큰 비용이 없는 **1
 | **서비스기획팀 시니어 기획자** | Concept-Agent | qwen3.6:35b-mlx | **동적 로딩.** 서비스 논리 구조, 제약 조건 설계 및 개발팀 구동 시 메모리 언로드(Unload). |
 | **크리에이티브팀 테크니컬 아티스트** | Art-Agent | Flux.1 Dev (FP8 정밀도) | **동적 호출.** UI/UX 시안 및 이미지 프롬프트 최적화. 생성 시 GPU 풀 로드 후 즉시 자원 반환. |
 | **기술개발팀 수석 엔지니어** | Dev-Agent | qwen3.6:35b-mlx | **상시 상주.** 기획서 기반 소스 코드 구현 및 VS Code CLI 연동 격리 환경 검증(Linting) 전담. |
-| **경영지원/IO 운영 지원 주임** | Blinky | Gemma 4 E4B (경량화) | **상시 상주.** 대용량 로그/데이터 초고속 3줄 요약, JSON 파싱 및 외부 n8n 웹훅 통신 전담. |
+| **경영지원/IO 운영 지원 주임** | Blinky | Gemma 4 E4B (경량화) | **상시 상주.** 대용량 로그/데이터 초고속 3줄 요약, JSON 파싱 및 내부 DB/비상 직접 웹훅 통신 전담. |
 
 ## 3. [공정 1] 로컬 채팅 서버 DB 스키마 명세
 **tasks:** task_id (PK), description (대표님 지시), status (PENDING/IN_PROGRESS/COMPLETED)
