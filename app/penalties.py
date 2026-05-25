@@ -1,5 +1,5 @@
 import sqlite3
-from app.database import get_agent_penalty, increment_agent_warning
+from app.database import get_agent_penalty, increment_agent_warning, pardon_agent_penalty
 from app.discord_relay import send_discord_log
 
 PENALTY_PROMPT_PREFIX = (
@@ -72,4 +72,31 @@ def enforce_penalty_check(agent_name, reason):
         "warning_count": warning_count,
         "is_penalized": is_penalized,
         "last_penalty_reason": reason
+    }
+
+def enforce_pardon_agent(agent_name):
+    """
+    Clears agent warnings, resets penalty status, and sends a green success Discord relay log.
+    """
+    success = pardon_agent_penalty(agent_name)
+    if not success:
+        return None
+        
+    # Send a Discord Notification with nice Green color (65280)
+    discord_content = (
+        f"🕊️ **Blinky 주임 에이전트 복권(사면) 집행 보고** 🕊️\n\n"
+        f"부서원 **{agent_name}**이(가) 대표님의 특별 사면령에 따라 **징계 해제(복권)** 조치되었습니다.\n\n"
+        f"해당 에이전트의 경고 누적 스택이 **0으로 초기화**되었으며, 시스템 프롬프트 접두사의 징계 딱지가 완전히 해제되고 정상적인 추론 온도로 복귀하였습니다."
+    )
+    send_discord_log(
+        content=discord_content,
+        title=f"🕊️ [사면 복권] {agent_name} 정신개조 수료 및 복귀",
+        color=65280 # Green
+    )
+    
+    return {
+        "agent_name": agent_name,
+        "warning_count": 0,
+        "is_penalized": False,
+        "last_penalty_reason": None
     }

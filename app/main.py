@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import database
 from app.database import run_git_snapshot
 from app.blinky_middleware import check_and_compress_context
-from app.penalties import enforce_penalty_check, get_agent_system_prompt
+from app.penalties import enforce_penalty_check, get_agent_system_prompt, enforce_pardon_agent
 
 app = FastAPI(
     title="Team-203 Virtual Office Meeting Room Engine",
@@ -45,6 +45,11 @@ class PromptRequest(BaseModel):
 
 class VramUnloadRequest(BaseModel):
     model: str = Field(..., example="qwen3.6:35b-mlx")
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = Field(None, example="테트리스 게임 기본 개발 수정")
+    description: Optional[str] = Field(None, example="Godot 4.2+ 엔진을 이용한 정교한 물리 연동")
+    status: Optional[str] = Field(None, example="PASSED_WITHOUT_CLAUDE")
 
 class TaskResponse(BaseModel):
     task_id: str
@@ -96,6 +101,33 @@ def get_task(task_id: str):
     if not res:
         raise HTTPException(status_code=404, detail="Task not found.")
     return res
+
+@app.patch("/api/tasks/{task_id}", response_model=TaskResponse)
+def update_task_endpoint(task_id: str, task_up: TaskUpdate):
+    existing = database.get_task(task_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Task not found.")
+        
+    try:
+        # If status is updated, use the standard update helper
+        if task_up.status is not None:
+            database.update_task_status(task_id, task_up.status)
+            
+        # Update other fields using SQLite connection directly to keep it extremely simple and isolated
+        conn = database.get_db_connection()
+        try:
+            if task_up.title is not None:
+                conn.execute("UPDATE tasks SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE task_id = ?", (task_up.title, task_id))
+            if task_up.description is not None:
+                conn.execute("UPDATE tasks SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE task_id = ?", (task_up.description, task_id))
+            conn.commit()
+        finally:
+            conn.close()
+            
+        updated = database.get_task(task_id)
+        return updated
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/rooms", status_code=status.HTTP_201_CREATED)
 def create_room(room: RoomCreate):
@@ -195,9 +227,8 @@ def get_room_context(room_id: str):
         
     # 2. Append subsequent active dialogue
     for msg in active_msgs:
-        role = "assistant"
-        # Optional: You can map roles if needed, e.g. mapping sender_role to user/assistant.
-        # But for LLM multi-agent systems, putting the sender name inside the content is highly standard.
+        # Hermes represents 'user' (initiating commands/planning), while other specialists act as 'assistant'
+        role = "user" if msg["sender_role"] == "Hermes" else "assistant"
         formatted_messages.append({
             "role": role,
             "content": f"[{msg['sender_role']}]: {msg['content']}"
@@ -219,6 +250,9 @@ def close_meeting_room(room_id: str):
         raise HTTPException(status_code=404, detail="Room not found.")
         
     database.close_room(room_id)
+    
+    # Archive all active messages from the closed room
+    database.archive_room_messages(room_id)
     
     # Trigger background Git snapshot backup
     run_git_snapshot(room_id, "closed")
@@ -286,6 +320,18 @@ def get_agent_prompt(agent_name: str, req: PromptRequest):
     try:
         res = get_agent_system_prompt(agent_name, req.base_prompt)
         return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/agents/{agent_name}/pardon")
+def pardon_agent(agent_name: str):
+    existing = database.get_agent_penalty(agent_name)
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not registered in penalty profiles.")
+        
+    try:
+        res = enforce_pardon_agent(agent_name)
+        return {"status": "success", "penalty_status": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -290,3 +290,22 @@ def update_system_setting(key: str, value: str):
     finally:
         conn.close()
 
+def pardon_agent_penalty(agent_name: str) -> bool:
+    """
+    Resets an agent's warning stack and removes penalty status.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE agent_penalties SET warning_count = 0, is_penalized = 0, last_penalty_reason = NULL, updated_at = CURRENT_TIMESTAMP WHERE agent_name = ?",
+            (agent_name,)
+        )
+        conn.commit()
+        print(f"🕊️ [DB Penalty Reset] Agent '{agent_name}' has been pardoned and warning stack reset to 0.")
+        return True
+    except Exception as e:
+        print(f"🚨 [DB Error] Failed to pardon agent '{agent_name}': {e}")
+        return False
+    finally:
+        conn.close()
+

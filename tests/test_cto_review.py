@@ -57,10 +57,10 @@ class TestCtoReview(unittest.TestCase):
         self.assertEqual(violations[0]["function"], "giant_function")
         self.assertEqual(violations[0]["lines"], 56) # 56 lines (1 signature line + 55 body lines)
         
-    @patch("requests.post")
+    @patch("requests.patch")
     @patch("requests.get")
     @patch("subprocess.run")
-    def test_main_cli_failsafe_flow(self, mock_sub, mock_get, mock_post):
+    def test_main_cli_failsafe_flow(self, mock_sub, mock_get, mock_patch):
         # 1. Setup mock responses representing a safe file but Claude CLI missing (Fail-Safe trigger)
         filepath = os.path.join(self.test_dir, "safe_sample.py")
         code = "def fine():\n    return 42\n"
@@ -70,21 +70,19 @@ class TestCtoReview(unittest.TestCase):
         # Simulate local 'claude' CLI command not found (FileNotFoundError)
         mock_sub.side_effect = FileNotFoundError()
         
-        # Route mock_get side effects to handle both CONFIG and TASKS endpoints
+        # Route mock_get side effects to handle CONFIG endpoint
         def mock_get_side_effect(url, **kwargs):
             res = MagicMock()
             res.status_code = 200
             if "config/cto-review" in url:
                 res.json.return_value = {"cto_review_enabled": True}
-            else:
-                res.json.return_value = {"task_id": "TASK-123", "title": "Tetris", "status": "PENDING"}
             return res
             
         mock_get.side_effect = mock_get_side_effect
         
-        mock_post_res = MagicMock()
-        mock_post_res.status_code = 200
-        mock_post.return_value = mock_post_res
+        mock_patch_res = MagicMock()
+        mock_patch_res.status_code = 200
+        mock_patch.return_value = mock_patch_res
         
         # Run main and ensure it handles the FileNotFoundError gracefully and exits with code 0 (success due to fail-safe)
         with patch("sys.argv", ["run_cto_review.py", filepath, "TASK-123"]):
@@ -93,9 +91,9 @@ class TestCtoReview(unittest.TestCase):
             self.assertEqual(cm.exception.code, 0)
             
         # Verify that it updated the task status to PASSED_WITHOUT_CLAUDE
-        mock_post.assert_called_with(
-            "http://localhost:8000/api/tasks", # or port env
-            json={"task_id": "TASK-123", "title": "Tetris", "status": "PASSED_WITHOUT_CLAUDE"},
+        mock_patch.assert_called_with(
+            "http://localhost:8000/api/tasks/TASK-123", # or port env
+            json={"status": "PASSED_WITHOUT_CLAUDE"},
             timeout=5
         )
 

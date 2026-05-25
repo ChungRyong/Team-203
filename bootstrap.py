@@ -37,6 +37,23 @@ def bootstrap():
         print(f"❌ Failed to seed system configuration: {e}")
         sys.exit(1)
         
+    # 4. Create local Monorepo project folders physically
+    print("📁 Initializing physical Monorepo workspace projects directory tree...")
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        projects_dir = os.path.join(base_dir, "workspace", "projects")
+        
+        # Create game_01_tetris sandbox directories
+        tetris_dir = os.path.join(projects_dir, "game_01_tetris")
+        for sub in ["concept", "art", "dev"]:
+            path = os.path.join(tetris_dir, sub)
+            os.makedirs(path, exist_ok=True)
+            
+        print(f"✅ Created physical directories: {tetris_dir}/(concept, art, dev)")
+    except Exception as e:
+        print(f"❌ Failed to build physical directory tree: {e}")
+        sys.exit(1)
+        
     print("\n🎉 [Team-203 Bootstrap] Setup finished successfully! DB is ready to serve.")
 
 if __name__ == "__main__":

@@ -110,15 +110,13 @@ def update_task_fail_safe(task_id, status_val):
     """
     try:
         url = f"{API_URL_TASKS}/{task_id}"
-        # Fetch existing task to ensure it is registered
-        res = requests.get(url, timeout=5)
+        # PATCH only the status to the newly created PATCH endpoint
+        res = requests.patch(url, json={"status": status_val}, timeout=5)
         if res.status_code == 200:
-            # Task exists, update status
-            task_data = res.json()
-            task_data["status"] = status_val
-            requests.post(API_URL_TASKS, json=task_data, timeout=5)
             print(f"🛡️ [Fail-Safe Activated] Task '{task_id}' updated to status: {status_val}")
             return True
+        else:
+            print(f"⚠️ [Fail-Safe Warning] PATCH request returned status: {res.status_code}")
     except Exception as e:
         print(f"⚠️ [Fail-Safe DB Warning] Task update bypassed: {e}")
     return False
