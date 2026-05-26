@@ -41,7 +41,7 @@ def check_asset_violations(filepath, registered_assets):
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
         
-    asset_refs = re.findall(r'[\w/._-]+\.(?:png|tscn)', content)
+    asset_refs = re.findall(r'[\w/.:_-]+\.(?:png|tscn)', content)
     
     violations = []
     for ref in asset_refs:
