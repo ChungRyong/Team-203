@@ -351,9 +351,9 @@ def get_audit_summary():
     """
     conn = get_db_connection()
     try:
-        # Fetch audit logs from the past 24 hours
+        # Fetch audit logs from the past 24 hours (with details column included)
         rows = conn.execute("""
-            SELECT event_type, status, elapsed_ms 
+            SELECT event_type, status, details, elapsed_ms 
             FROM system_audit_logs 
             WHERE created_at >= datetime('now', '-1 day')
         """).fetchall()
@@ -396,14 +396,35 @@ def get_audit_summary():
         discipline_score = 100.0 - (total_warnings * 10.0) - (penalized_agents * 30.0)
         discipline_score = max(0.0, min(100.0, discipline_score))
         
-        # 5. Office Health Index (Aggregated)
-        office_health_index = (vram_health + cto_compliance + git_reliability + discipline_score) / 4.0
+        # 5. QA Health: 'GAME_QA'
+        qa_logs = [l for l in logs if l['event_type'] == 'GAME_QA']
+        if qa_logs:
+            qa_scores = []
+            for l in qa_logs:
+                rate = None
+                if l.get('details'):
+                    try:
+                        det = json.loads(l['details'])
+                        if 'success_rate' in det:
+                            rate = float(det['success_rate'])
+                    except Exception:
+                        pass
+                if rate is None:
+                    rate = 100.0 if l['status'] == 'SUCCESS' else 0.0
+                qa_scores.append(rate)
+            qa_health = sum(qa_scores) / len(qa_scores)
+        else:
+            qa_health = 100.0
+            
+        # 6. Office Health Index (Aggregated 5-factor)
+        office_health_index = (vram_health + cto_compliance + git_reliability + discipline_score + qa_health) / 5.0
         
         return {
             "vram_health": round(vram_health, 2),
             "cto_compliance": round(cto_compliance, 2),
             "backup_reliability": round(git_reliability, 2),
             "discipline_score": round(discipline_score, 2),
+            "qa_health": round(qa_health, 2),
             "warning_agents_count": warning_agents,
             "penalized_agents_count": penalized_agents,
             "total_warnings": total_warnings,
@@ -416,6 +437,7 @@ def get_audit_summary():
             "cto_compliance": 100.0,
             "backup_reliability": 100.0,
             "discipline_score": 100.0,
+            "qa_health": 100.0,
             "warning_agents_count": 0,
             "penalized_agents_count": 0,
             "total_warnings": 0,

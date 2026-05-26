@@ -107,8 +107,9 @@ class TestSystemAudits(unittest.TestCase):
         self.assertEqual(data["penalized_agents_count"], 0)
         self.assertEqual(data["total_warnings"], 1)
         
-        # Aggregated Health Index: (66.67 + 75.0 + 50.0 + 90.0) / 4 = 70.42%
-        self.assertAlmostEqual(data["office_health_index"], 70.42, places=1)
+        # Aggregated Health Index: (66.67 + 75.0 + 50.0 + 90.0 + 100.0) / 5 = 76.33%
+        self.assertAlmostEqual(data["office_health_index"], 76.33, places=1)
+        self.assertEqual(data["qa_health"], 100.0)
 
     @patch("orchestrator.send_discord_log")
     def test_orchestrator_finalize_alert_embeds(self, mock_send_discord):
@@ -142,6 +143,7 @@ class TestSystemAudits(unittest.TestCase):
                 "cto_compliance": 100.0,
                 "backup_reliability": 100.0,
                 "discipline_score": 80.0,
+                "qa_health": 100.0,
                 "total_warnings": 2,
                 "penalized_agents_count": 0
             }
@@ -180,6 +182,7 @@ class TestSystemAudits(unittest.TestCase):
                 "cto_compliance": 80.0,
                 "backup_reliability": 50.0,
                 "discipline_score": 100.0,
+                "qa_health": 70.0,
                 "total_warnings": 0,
                 "penalized_agents_count": 0
             }

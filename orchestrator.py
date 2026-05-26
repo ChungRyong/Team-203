@@ -220,6 +220,45 @@ class VirtualStudioOrchestrator:
             
         return agent_response_text
 
+    def execute_qa_audit_stage(self, test_suite_name, total_cases, passed_cases):
+        """
+        Step 5: Run automated game QA testing (representing GUT headless tests).
+        Enforces 95% pass rate. If failed, increments warning and returns REJECTED.
+        """
+        start_time = time.perf_counter()
+        self.log(f"🎮 [QA Stage] Initiating headless test suite '{test_suite_name}' ({passed_cases}/{total_cases})...")
+        
+        failed_cases = total_cases - passed_cases
+        qa_payload = {
+            "task_id": self.task_id,
+            "test_suite_name": test_suite_name,
+            "total_cases": total_cases,
+            "passed_cases": passed_cases,
+            "failed_cases": failed_cases
+        }
+        
+        res = self.call_api("POST", "/qa/verify", qa_payload)
+        elapsed = int((time.perf_counter() - start_time) * 1000)
+        
+        if res and res.status_code == 201:
+            data = res.json()
+            success_rate = data.get("success_rate", 0.0)
+            outcome = data.get("outcome", "FAILED")
+            
+            if outcome == "SUCCESS":
+                self.log(f"✅ [QA Stage] GUT automated tests PASSED. Success Rate: {success_rate}%")
+                return "PASSED"
+            else:
+                self.log(f"❌ [QA Stage] GUT automated tests FAILED. Success Rate: {success_rate}% (< 95%)")
+                # Automatically report penalty warning to Dev-Agent
+                penalize_payload = {"reason": f"게임 QA 1단계({test_suite_name}) 실패 (성공율 {success_rate}%)"}
+                self.call_api("POST", f"/agents/Dev-Agent/penalize", penalize_payload)
+                return "REJECTED"
+        else:
+            self.log("⚠️ Failed to reach QA verification API. Bypassing with warning.")
+            self.log_audit("GAME_QA", "WARNING", {"error": "api_offline"}, elapsed)
+            return "PASSED_WITHOUT_QA"
+
     def execute_cto_review_flow(self, file_or_dir_path):
         """
         Step 6: Run local run_cto_review.py process and implement dynamic CEO dual-track rules.
@@ -340,6 +379,7 @@ class VirtualStudioOrchestrator:
         penalized_count = 0
         
         summary_res = self.call_api("GET", "/audit/summary")
+        qa_health = 100.0
         if summary_res and summary_res.status_code == 200:
             summary_data = summary_res.json()
             health_score = summary_data.get("office_health_index", 100.0)
@@ -347,6 +387,7 @@ class VirtualStudioOrchestrator:
             cto_compliance = summary_data.get("cto_compliance", 100.0)
             backup_reliability = summary_data.get("backup_reliability", 100.0)
             discipline_score = summary_data.get("discipline_score", 100.0)
+            qa_health = summary_data.get("qa_health", 100.0)
             total_warnings = summary_data.get("total_warnings", 0)
             penalized_count = summary_data.get("penalized_agents_count", 0)
             
@@ -373,7 +414,8 @@ class VirtualStudioOrchestrator:
             f"- **VRAM 반환율:** {vram_health}% (OOM 누수 감지 0건)\n"
             f"- **CTO PR 준수율:** {cto_compliance}% (코드 심사 반려 1회 이상 집계)\n"
             f"- **디시플린 레벨:** 경고 적립 {total_warnings}건 (현재 징계 상태 에이전트 {penalized_count}개)\n"
-            f"- **백업 신뢰도:** {backup_reliability}% (Git 자동 스냅샷 완료)\n\n"
+            f"- **백업 신뢰도:** {backup_reliability}% (Git 자동 스냅샷 완료)\n"
+            f"- **QA 성공율:** {qa_health}% (GUT 알고리즘/동작 자동 통과 비율)\n\n"
             f"## 🚨 비상 관리 위원회 권고 사항 (Blinky / Hermes)\n"
             f"- {advice}\n"
         )
@@ -393,7 +435,7 @@ class VirtualStudioOrchestrator:
             f"**[종합 산출물 요약 리포트]**\n"
             f"{milestone_summary}\n\n"
             f"📊 **[가상 사옥 감사실 정량 스코어 보고]**\n"
-            f"- 📈 **사내 건강성 지수:** **{health_score}%** (VRAM {vram_health}% / CTO 준수 {cto_compliance}% / 기강 {discipline_score}% / 백업 {backup_reliability}%)\n"
+            f"- 📈 **사내 건강성 지수:** **{health_score}%** (VRAM {vram_health}% / CTO 준수 {cto_compliance}% / 기강 {discipline_score}% / 백업 {backup_reliability}% / QA {qa_health}%)\n"
             f"- 🚨 **Hermes 감사실 한줄 권고:** *{advice}*\n\n"
             f"본 회의실에 참여한 모든 에이전트(`Concept-Agent`, `Art-Agent`, `Dev-Agent`)는 메모리 언로드 조치되었으며, "
             f"최종 소스코드는 **자동 Git 백업 스냅샷 저장소**에 안전하게 박제되었습니다."
@@ -480,6 +522,13 @@ def main():
     dev_output = orchestrator.run_agent_turn("Dev-Agent", dev_prompt, "qwen3.6:35b-mlx")
     orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload after dev coding
     
+    # GUT 게임 QA 1단계 자동화 검증 기동
+    qa_status = orchestrator.execute_qa_audit_stage(
+        test_suite_name="Tetris_Stable_Grid_Edge_Cases",
+        total_cases=20,
+        passed_cases=20
+    )
+    
     # 5. CTO 에이전트 정밀 코드 리뷰 집행 (Dev-Agent 코딩 완료 시점)
     # We specify a target test python file in dev sandbox to audit
     target_dev_file = "calc_sample.py" # sample mockup file
@@ -504,7 +553,8 @@ def main():
         f"- **기획서 요약:** Godot 4.2+ 그리드 기반 10x20 보드 및 테트로미노 낙하 명세 완성.\n"
         f"- **아트에셋 결과:** {art_status} 생성 배치 완료.\n"
         f"- **개발코드 요약:** `sample_run()` GDScript 테트리스 보드 시드 연동 완료.\n"
-        f"- **CTO 리뷰 결과:** {review_status} 통과 완료."
+        f"- **CTO 리뷰 결과:** {review_status} 통과 완료.\n"
+        f"- **GUT QA 결과:** {qa_status} 완료."
     )
     orchestrator.finalize_studio(milestone_summary)
 

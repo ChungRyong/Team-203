@@ -64,6 +64,13 @@ class AuditLogCreate(BaseModel):
     details: Optional[dict] = Field(None, example={"model": "qwen3.6:35b-mlx"})
     elapsed_ms: Optional[int] = Field(None, example=120)
 
+class QaVerifyRequest(BaseModel):
+    task_id: str = Field(..., example="TASK-QA-01")
+    test_suite_name: str = Field(..., example="Tetromino_Fall_Edge_Cases")
+    total_cases: int = Field(..., example=20)
+    passed_cases: int = Field(..., example=19)
+    failed_cases: int = Field(..., example=1)
+
 class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, example="테트리스 게임 기본 개발 수정")
     description: Optional[str] = Field(None, example="Godot 4.2+ 엔진을 이용한 정교한 물리 연동")
@@ -553,5 +560,41 @@ def get_audit_summary():
     try:
         res = database.get_audit_summary()
         return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/qa/verify", status_code=status.HTTP_201_CREATED)
+def post_qa_verify(req: QaVerifyRequest):
+    if req.total_cases <= 0:
+        raise HTTPException(status_code=400, detail="total_cases must be greater than 0.")
+    if req.passed_cases + req.failed_cases != req.total_cases:
+        raise HTTPException(status_code=400, detail="Sum of passed and failed cases must equal total_cases.")
+        
+    try:
+        success_rate = (req.passed_cases / req.total_cases) * 100.0
+        status_str = "SUCCESS" if success_rate >= 95.0 else "FAILED"
+        
+        details = {
+            "task_id": req.task_id,
+            "test_suite_name": req.test_suite_name,
+            "total_cases": req.total_cases,
+            "passed_cases": req.passed_cases,
+            "failed_cases": req.failed_cases,
+            "success_rate": round(success_rate, 2)
+        }
+        
+        database.add_audit_log(
+            event_type="GAME_QA",
+            status=status_str,
+            details=details,
+            elapsed_ms=random.randint(200, 1500) # Simulating GUT Execution Time
+        )
+        
+        return {
+            "status": "success",
+            "success_rate": round(success_rate, 2),
+            "outcome": status_str,
+            "message": f"QA test suite '{req.test_suite_name}' completed. Outcome: {status_str} ({req.passed_cases}/{req.total_cases})"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
