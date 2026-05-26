@@ -432,6 +432,8 @@ def generate_art(req: ArtGenerateRequest):
                                 filename = img.get("filename")
                                 comfy_output_dir = os.path.join(os.path.dirname(base_dir), "ComfyUI", "output")
                                 if not os.path.exists(comfy_output_dir):
+                                    comfy_output_dir = os.path.join(base_dir, "ComfyUI", "output")
+                                if not os.path.exists(comfy_output_dir):
                                     comfy_output_dir = "output"
                                 src_path = os.path.join(comfy_output_dir, filename)
                                 if os.path.exists(src_path):
