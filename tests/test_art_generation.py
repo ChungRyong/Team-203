@@ -25,8 +25,8 @@ class TestArtGeneration(unittest.TestCase):
         if os.path.exists(self.project_dir):
             shutil.rmtree(self.project_dir)
             
-    @patch("requests.post")
-    @patch("requests.get")
+    @patch("app.main.requests.post")
+    @patch("app.main.requests.get")
     def test_art_generate_success(self, mock_get, mock_post):
         # 1. Mock ComfyUI /prompt POST response
         mock_post_res = MagicMock()
@@ -94,7 +94,7 @@ class TestArtGeneration(unittest.TestCase):
             except Exception:
                 pass
 
-    @patch("requests.post")
+    @patch("app.main.requests.post")
     def test_art_generate_fail_safe_offline(self, mock_post):
         # Force a connection exception to simulate offline ComfyUI
         mock_post.side_effect = Exception("ComfyUI Connection Refused")
