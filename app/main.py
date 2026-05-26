@@ -58,6 +58,12 @@ class ArtGenerateRequest(BaseModel):
     prompt: str = Field(..., example="neon tetris grid board game UI layout")
     seed: Optional[int] = Field(-1, example=-1)
 
+class AuditLogCreate(BaseModel):
+    event_type: str = Field(..., example="VRAM_UNLOAD")
+    status: str = Field(..., example="SUCCESS")
+    details: Optional[dict] = Field(None, example={"model": "qwen3.6:35b-mlx"})
+    elapsed_ms: Optional[int] = Field(None, example=120)
+
 class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, example="테트리스 게임 기본 개발 수정")
     description: Optional[str] = Field(None, example="Godot 4.2+ 엔진을 이용한 정교한 물리 연동")
@@ -261,13 +267,26 @@ def close_meeting_room(room_id: str):
     if not room:
         raise HTTPException(status_code=404, detail="Room not found.")
         
+    import time
+    start_time = time.perf_counter()
+    
     database.close_room(room_id)
     
     # Archive all active messages from the closed room
     database.archive_room_messages(room_id)
     
     # Trigger background Git snapshot backup
-    run_git_snapshot(room_id, "closed")
+    git_start = time.perf_counter()
+    git_success = run_git_snapshot(room_id, "closed")
+    git_elapsed = int((time.perf_counter() - git_start) * 1000)
+    
+    # Record Git snapshot to audit logs
+    database.add_audit_log(
+        event_type="GIT_SNAPSHOT",
+        status="SUCCESS" if git_success else "FAILED",
+        details={"room_id": room_id, "action": "close_meeting_room"},
+        elapsed_ms=git_elapsed
+    )
     
     # Post system shutdown announcement
     database.add_message(
@@ -276,7 +295,20 @@ def close_meeting_room(room_id: str):
         "🚪 [시스템 안내] 수석PM(Hermes)의 지시로 회의가 성공적으로 승인 종료되었으며 회의실 세션이 영구 폐쇄되었습니다.", 
         "TEXT"
     )
-    return {"status": "success", "message": f"Room {room_id} closed/destructed successfully."}
+    
+    total_elapsed = int((time.perf_counter() - start_time) * 1000)
+    # Record Session close to audit logs
+    database.add_audit_log(
+        event_type="SESSION_COMPRESS",
+        status="SUCCESS",
+        details={"room_id": room_id, "action": "close_and_archive"},
+        elapsed_ms=total_elapsed
+    )
+    return {
+        "status": "success", 
+        "message": f"Room {room_id} closed/destructed successfully.",
+        "git_snapshot_status": "SUCCESS" if git_success else "FAILED"
+    }
 
 @app.post("/api/vram/unload")
 def unload_vram(req: VramUnloadRequest):
@@ -507,3 +539,19 @@ def generate_art(req: ArtGenerateRequest):
             "message": "Art asset generated and saved successfully via ComfyUI.",
             "metadata": asset_entry
         }
+
+@app.post("/api/audit/log", status_code=status.HTTP_201_CREATED)
+def post_audit_log(log: AuditLogCreate):
+    try:
+        database.add_audit_log(log.event_type, log.status, log.details, log.elapsed_ms)
+        return {"status": "success", "message": "Audit log added successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/audit/summary")
+def get_audit_summary():
+    try:
+        res = database.get_audit_summary()
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

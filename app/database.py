@@ -75,6 +75,18 @@ def create_tables():
     );
     """)
     
+    # 6. system_audit_logs Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS system_audit_logs (
+        log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,          -- 'VRAM_UNLOAD', 'CTO_REVIEW', 'BLINKY_PENALTY', 'GIT_SNAPSHOT', 'SESSION_COMPRESS'
+        status TEXT NOT NULL,              -- 'SUCCESS', 'WARNING', 'FAILED'
+        details TEXT,                      -- 상세 JSON 내용
+        elapsed_ms INTEGER,                -- 소요 시간
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -306,6 +318,109 @@ def pardon_agent_penalty(agent_name: str) -> bool:
     except Exception as e:
         print(f"🚨 [DB Error] Failed to pardon agent '{agent_name}': {e}")
         return False
+    finally:
+        conn.close()
+
+
+def add_audit_log(event_type: str, status: str, details: dict = None, elapsed_ms: int = None):
+    """
+    Records a system operation event to the SQLite system_audit_logs table.
+    """
+    conn = get_db_connection()
+    try:
+        details_str = json.dumps(details) if details is not None else None
+        conn.execute(
+            "INSERT INTO system_audit_logs (event_type, status, details, elapsed_ms) VALUES (?, ?, ?, ?)",
+            (event_type, status, details_str, elapsed_ms)
+        )
+        conn.commit()
+        print(f"🛡️ [Audit Log] Recorded event '{event_type}' with status '{status}'.")
+        return True
+    except Exception as e:
+        print(f"🚨 [Audit Error] Failed to write audit log: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_audit_summary():
+    """
+    Computes system operational health metrics for the past 24 hours.
+    Returns metrics like VRAM Health, CTO Compliance, Backup Reliability, Discipline Level,
+    and a aggregated Office Health Index.
+    """
+    conn = get_db_connection()
+    try:
+        # Fetch audit logs from the past 24 hours
+        rows = conn.execute("""
+            SELECT event_type, status, elapsed_ms 
+            FROM system_audit_logs 
+            WHERE created_at >= datetime('now', '-1 day')
+        """).fetchall()
+        
+        logs = [dict(row) for row in rows]
+        
+        # 1. VRAM Health: 'VRAM_UNLOAD'
+        vram_logs = [l for l in logs if l['event_type'] == 'VRAM_UNLOAD']
+        if vram_logs:
+            vram_success = len([l for l in vram_logs if l['status'] == 'SUCCESS'])
+            vram_health = (vram_success / len(vram_logs)) * 100.0
+        else:
+            vram_health = 100.0
+            
+        # 2. CTO Compliance: 'CTO_REVIEW'
+        cto_logs = [l for l in logs if l['event_type'] == 'CTO_REVIEW']
+        if cto_logs:
+            cto_success = len([l for l in cto_logs if l['status'] == 'SUCCESS'])
+            cto_compliance = (cto_success / len(cto_logs)) * 100.0
+        else:
+            cto_compliance = 100.0
+            
+        # 3. Backup Reliability: 'GIT_SNAPSHOT'
+        git_logs = [l for l in logs if l['event_type'] == 'GIT_SNAPSHOT']
+        if git_logs:
+            git_success = len([l for l in git_logs if l['status'] == 'SUCCESS'])
+            git_reliability = (git_success / len(git_logs)) * 100.0
+        else:
+            git_reliability = 100.0
+            
+        # 4. Blinky Discipline: compiled warnings from agent_penalties table
+        penalties = conn.execute("SELECT agent_name, warning_count, is_penalized FROM agent_penalties").fetchall()
+        penalties_list = [dict(p) for p in penalties]
+        
+        warning_agents = len([p for p in penalties_list if p['warning_count'] > 0])
+        penalized_agents = len([p for p in penalties_list if p['is_penalized'] == 1])
+        total_warnings = sum([p['warning_count'] for p in penalties_list])
+        
+        # Discipline Score: Subtract 10% per warning, 30% per penalization. Clamp between 0 and 100.
+        discipline_score = 100.0 - (total_warnings * 10.0) - (penalized_agents * 30.0)
+        discipline_score = max(0.0, min(100.0, discipline_score))
+        
+        # 5. Office Health Index (Aggregated)
+        office_health_index = (vram_health + cto_compliance + git_reliability + discipline_score) / 4.0
+        
+        return {
+            "vram_health": round(vram_health, 2),
+            "cto_compliance": round(cto_compliance, 2),
+            "backup_reliability": round(git_reliability, 2),
+            "discipline_score": round(discipline_score, 2),
+            "warning_agents_count": warning_agents,
+            "penalized_agents_count": penalized_agents,
+            "total_warnings": total_warnings,
+            "office_health_index": round(office_health_index, 2)
+        }
+    except Exception as e:
+        print(f"🚨 [Audit Error] Failed to generate audit summary: {e}")
+        return {
+            "vram_health": 100.0,
+            "cto_compliance": 100.0,
+            "backup_reliability": 100.0,
+            "discipline_score": 100.0,
+            "warning_agents_count": 0,
+            "penalized_agents_count": 0,
+            "total_warnings": 0,
+            "office_health_index": 100.0
+        }
     finally:
         conn.close()
 
