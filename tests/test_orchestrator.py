@@ -21,6 +21,7 @@ class TestOrchestrator(unittest.TestCase):
         self.orchestrator = VirtualStudioOrchestrator(
             self.task_id, self.room_id, self.room_name, self.allowed_agents
         )
+        self.orchestrator.log_audit = MagicMock()
 
     @patch("requests.post")
     @patch("requests.patch")
@@ -238,10 +239,11 @@ class TestOrchestrator(unittest.TestCase):
             timeout=10
         )
 
+    @patch("requests.get")
     @patch("requests.post")
     @patch("requests.patch")
     @patch("orchestrator.send_discord_log")
-    def test_finalize_studio(self, mock_discord, mock_patch, mock_post):
+    def test_finalize_studio(self, mock_discord, mock_patch, mock_post, mock_get):
         mock_post_res = MagicMock()
         mock_post_res.status_code = 200
         mock_post.return_value = mock_post_res
@@ -249,6 +251,19 @@ class TestOrchestrator(unittest.TestCase):
         mock_patch_res = MagicMock()
         mock_patch_res.status_code = 200
         mock_patch.return_value = mock_patch_res
+
+        mock_get_res = MagicMock()
+        mock_get_res.status_code = 200
+        mock_get_res.json.return_value = {
+            "office_health_index": 90.0,
+            "vram_health": 100.0,
+            "cto_compliance": 100.0,
+            "backup_reliability": 100.0,
+            "discipline_score": 100.0,
+            "total_warnings": 0,
+            "penalized_agents_count": 0
+        }
+        mock_get.return_value = mock_get_res
 
         self.orchestrator.finalize_studio("Game completed beautifully.")
 
@@ -268,6 +283,15 @@ class TestOrchestrator(unittest.TestCase):
         args, kwargs = mock_discord.call_args
         self.assertEqual(kwargs["color"], 3447003)  # Nice Blue
         self.assertIn("TASK-TEST-777", kwargs["content"])
+
+        # Clean up any test diary files
+        import glob
+        import datetime
+        today_str = datetime.datetime.now().strftime("%Y%m%d")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        expected_diary = os.path.join(base_dir, "workspace", "audit", f"audit_diary_{today_str}.md")
+        if os.path.exists(expected_diary):
+            os.remove(expected_diary)
 
 if __name__ == "__main__":
     unittest.main()

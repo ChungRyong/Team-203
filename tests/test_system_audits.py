@@ -156,7 +156,7 @@ class TestSystemAudits(unittest.TestCase):
             args, kwargs = mock_send_discord.call_args
             self.assertEqual(kwargs["color"], 3447003) # Blue
             self.assertIn("🏆 [마일스톤 완료]", kwargs["title"])
-            self.assertIn("사내 건강성 지수: **95.0%**", kwargs["content"])
+            self.assertIn("사내 건강성 지수:** **95.0%**", kwargs["content"])
             
         # Clear mock calls
         mock_send_discord.reset_mock()
@@ -194,7 +194,7 @@ class TestSystemAudits(unittest.TestCase):
             args, kwargs = mock_send_discord.call_args
             self.assertEqual(kwargs["color"], 16711680) # Red
             self.assertIn("🚨 [비상 경보]", kwargs["title"])
-            self.assertIn("사내 건강성 지수: **70.0%**", kwargs["content"])
+            self.assertIn("사내 건강성 지수:** **70.0%**", kwargs["content"])
             
             # Verify file creation for diary
             import glob
