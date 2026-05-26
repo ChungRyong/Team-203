@@ -25,16 +25,17 @@ class TestArtGeneration(unittest.TestCase):
         if os.path.exists(self.project_dir):
             shutil.rmtree(self.project_dir)
             
-    @patch("app.main.requests.post")
-    @patch("app.main.requests.get")
-    def test_art_generate_success(self, mock_get, mock_post):
-        # 1. Mock ComfyUI /prompt POST response
+    def test_art_generate_success(self):
+        # 1. Create fully isolated mock requests object
+        mock_req = MagicMock()
+        
+        # Mock ComfyUI /prompt POST response
         mock_post_res = MagicMock()
         mock_post_res.status_code = 200
         mock_post_res.json.return_value = {"prompt_id": "prompt-12345"}
-        mock_post.return_value = mock_post_res
+        mock_req.post.return_value = mock_post_res
         
-        # 2. Mock ComfyUI /history/{prompt_id} GET response showing successful completion
+        # Mock ComfyUI /history/{prompt_id} GET response showing successful completion
         mock_get_res = MagicMock()
         mock_get_res.status_code = 200
         mock_get_res.json.return_value = {
@@ -48,7 +49,7 @@ class TestArtGeneration(unittest.TestCase):
                 }
             }
         }
-        mock_get.return_value = mock_get_res
+        mock_req.get.return_value = mock_get_res
         
         # Write a mock file inside ComfyUI/output so shutil.copy finds it
         comfy_output_dir = os.path.join(self.base_dir, "ComfyUI", "output")
@@ -64,7 +65,9 @@ class TestArtGeneration(unittest.TestCase):
                 "prompt": "pixel art hero character running",
                 "seed": 123456
             }
-            res = self.client.post("/api/art/generate", json=payload)
+            # Patch app.main.requests dynamically inside this context
+            with patch("app.main.requests", mock_req):
+                res = self.client.post("/api/art/generate", json=payload)
             
             self.assertEqual(res.status_code, 200)
             self.assertEqual(res.json()["status"], "success")
@@ -94,10 +97,10 @@ class TestArtGeneration(unittest.TestCase):
             except Exception:
                 pass
 
-    @patch("app.main.requests.post")
-    def test_art_generate_fail_safe_offline(self, mock_post):
+    def test_art_generate_fail_safe_offline(self):
         # Force a connection exception to simulate offline ComfyUI
-        mock_post.side_effect = Exception("ComfyUI Connection Refused")
+        mock_req = MagicMock()
+        mock_req.post.side_effect = Exception("ComfyUI Connection Refused")
         
         payload = {
             "project_id": "game_test_art",
@@ -105,7 +108,8 @@ class TestArtGeneration(unittest.TestCase):
             "prompt": "neon wireframe layout",
             "seed": -1
         }
-        res = self.client.post("/api/art/generate", json=payload)
+        with patch("app.main.requests", mock_req):
+            res = self.client.post("/api/art/generate", json=payload)
         
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["status"], "warning")
