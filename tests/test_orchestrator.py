@@ -180,7 +180,7 @@ class TestOrchestrator(unittest.TestCase):
         mock_post.side_effect = mock_post_side_effect
 
         response_text = self.orchestrator.run_agent_turn(
-            "Dev-Agent", "base_prompt", "gemma4:4b"
+            "Dev-Agent", "base_prompt", "gemma4:4b-mlx"
         )
         self.assertEqual(response_text, "Penalized strictly correct response")
 

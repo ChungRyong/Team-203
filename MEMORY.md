@@ -6,39 +6,40 @@
 
 ## 1. 📅 오늘 완료한 주요 작업 및 핵심 변경 사항
 
-### ① 오케스트레이션 루프(`orchestrator.py`) 통합 유닛 테스트 완비
-- **tests/test_orchestrator.py 신규 수립 (Critical):** `VirtualStudioOrchestrator` 클래스의 8대 통합 시나리오(WBS 기동, VRAM 능동 해제, 순차 에이전트 턴 제어, 징계 상태 자동 격리, CTO 리뷰 On/Off 바이패스 분기, AST 50줄 심사 통과/Reject 분기, 회의실 폐쇄 및 디스코드 전송)를 완벽히 모킹 검증했습니다.
-- **CEO 이원화 CTO 리뷰/사면 규칙 코딩 및 물리적 입증 (Critical):** 단순 AST 50줄 위반이나 단순 반려 시, 에이전트에게 경고를 적립하지 않고 즉시 `/api/agents/Dev-Agent/pardon`을 연동 호출하여 징계 스택을 원복(사면)하고 교정 턴 기회를 제공하는 이원화된 환류 로직의 무결성을 코드로 명백하게 검증 완료했습니다.
-- **징계 상태 격리 통제 입증 (Important):** 징계(penalized) 상태에 돌입한 에이전트에 대해 시스템 프롬프트 접두사에 `[절대 팩트 모드]` 제약 조건이 동적 주입되며 추천 온도가 `0.0`으로 자동 강제 격리되는 안전 장치가 정상 작동함을 증명했습니다.
+### ① [마일스톤 1.5] 가상 사옥 감사실 (Audit Bureau) 및 정량 모니터링 인프라 구축 (Critical)
+- **SQLite 감사 로그 테이블 (`system_audit_logs`) 신설:** 사내의 모든 핵심 공정(VRAM 캐시 아웃, CTO 정적 코드 심사, Blinky 징계, Git 스냅샷)의 성공 여부 및 소요 지연 시간(ms)을 영구 적재하는 스키마를 신설하고 헬퍼 함수를 완비했습니다.
+- **사내 건강성 지수 (Office Health Index) 요약 API 탑재:** 최근 24시간 감사 로그를 동적으로 파싱하여 VRAM 반환 성공률, CTO 1회 패스율, 백업 신뢰도, 디시플린 기강 수준을 0.0~100.0% 정량 지표로 자동 취합하는 `/api/audit/summary`를 완비했습니다.
+- **오케스트레이터 감사 데몬 및 실시간 디스코드 경보 연동:** WBS 부트스트랩 단계부터 태스크 종결 시점까지 매 공정의 elapsed_ms를 계산하여 감사실에 자동 로깅하고, 태스크 마감 시 건강 지수가 **80% 미만**으로 하락하면 대표실로 즉각 **적색 비상 경보 (Red Embed)**를 발송하며, 이상 없을 시 청색 보고(Blue Embed)를 발송하도록 결합했습니다.
+- **Obsidian 연동 일일 경영 감사 다이어리 자동 생성:** 태스크 종료 시점에 `workspace/audit/` 경로 하위에 `audit_diary_[YYYYMMDD].md` 감사 일지를 자동으로 물리 생성하도록 구축하여 Obsidian Vault Dataview/Bases 대시보드 시각화를 완벽 호환 지원합니다.
 
-### ② 3순위: Art-Agent ComfyUI 이미지 생성 연동 구현 및 테스트 완비
-- **ComfyUI 워크플로우 템플릿 신설 (config/comfyui_workflow_flux.json):** 긍정 프롬프트와 샘플러 시드를 동적으로 치환/인젝션하여 ComfyUI Prompt API에 안전하게 밀어넣는 JSON 스키마를 수립 완료했습니다.
-- **FastAPI 이미지 생성 엔드포인트 신설 (app/main.py):** `POST /api/art/generate` API를 구축해 ComfyUI 서버(포트 8188)와 폴링 통신을 구현하고, 오프라인 시 placeholder(1x1 유효 투명 PNG)를 즉석에서 안전하게 물리 파일로 생성하는 **Fail-Safe** 장치를 완비했습니다.
-- **Sequential Queue 확장 및 VRAM 언로드 고도화 (orchestrator.py):** 직렬 오케스트레이터 시퀀스에 `Concept-Agent(기획)` ➡️ `Art-Agent(디자인 및 에셋 이미지 생성)` ➡️ `Dev-Agent(개발)`의 3에이전트 순차 교대 루프를 장착하고, 턴 이동 시 VRAM을 해제하여 GPU가 ComfyUI와 Ollama에 번갈아 100% 집중할 수 있게 설계 보완했습니다.
-- **에셋 생성 통합 테스트 완비 (tests/test_art_generation.py 신설):** ComfyUI의 온라인 완료 시나리오와 오프라인 Fail-Safe 1x1 PNG 생성 시나리오를 100% 통합 패스 성공했습니다.
-- **3에이전트 직렬 드라이런 완결 (TASK-TEST-888):** 실제 로컬 서버 연동 후 3에이전트 기동을 모의 실행하여 SQLite 턴 제어 ➡️ VRAM 언로드 ➡️ ComfyUI 연동 에셋 생성(warning 폴백) ➡️ 개발 ➡️ 마일리 마일스톤 마감 및 디스코드 요약 경보 ➡️ Git 백그라운드 자동 스냅샷까지의 전 공정이 물 흐르듯 가동됨을 최종 입증했습니다.
+### ② [마일스톤 2] 게임 QA 1단계 (GUT Headless 자동화 검증) 파이프라인 연동 (Critical)
+- **FastAPI QA 연동 API 신설 (`POST /api/qa/verify`):** GUT Headless 테스트 수행 결과를 수집하여 성공률(%)을 도출하고, 성공률이 **95% 미만**인 경우 FAILED 상태로 데이터베이스 감사 로그에 기록하는 엔드포인트를 구현 완료했습니다.
+- **감사실 5대 지표 확장 (`QA Health` 추가):** 기존 4대 건강 지표에 **`QA Health` (게임 QA 테스트 합격률, %)**를 신설 추가하여 총 5대 지표의 종합 평균값으로 **사내 건강성 지수**를 계산하도록 연산 지형을 고도화했습니다.
+- **오케스트레이터 QA 검증 및 자가 치유(Self-Healing) 파이프라인 통합:** Dev-Agent 코딩 직후 자동으로 GUT QA 검증(`execute_qa_audit_stage`)을 수행하며, 통과율 95% 미만 시 즉각 `REJECT` 판정을 내리고 Dev-Agent에게 **Blinky 징계 경고를 자동 연동 부과**하여 스스로 버그를 수정(Self-Healing)하고 재제출하도록 피드백 루프를 결합했습니다.
+- **QA 통합 테스트 신설 및 28개 전구간 패스 (`tests/test_qa_pipeline.py`):** QA API 동작, 5대 지표 종합 지수 연산, 오케스트레이터 QA 통과/반려 및 징계 연동을 모킹 테스트 세트로 완비하여, **전체 28개 통합 유닛 테스트가 단 2.20초 만에 100% 무결점으로 통과(OK)**함을 증명했습니다.
 
-### ③ 4순위: 에이전트 구동 지침 및 persona 명세 정비 완비
-- **VIRTUAL_OFFICE.md [V5 개정]:** ComfyUI 그래픽 생산 규정 및 '에셋 날조 방지 리소스 바인딩 규정' 신설.
-- **백엔드 인프라 명세서 [v1.5 개정]:** `Art-Agent` 징계 조건 및 `metadata.json` 사이드카 검사 규격 보강.
-- **에이전트별 핵심 지침 [v1.4 개정]:** 에이전트 체인의 시각적/기능적 결합성(Chain of Visual Integrity) 수립 완료.
-
-### ④ [마일스톤 1] 에셋 날조 방지 정적 감사 기능 물리적 코딩 및 검증 완료 (Critical)
-- **정규식 기반 리소스 참조 정밀 추출 (run_cto_review.py):** `[\w/.:_-]+\.(?:png|tscn)` 패턴을 도입하여, 소스코드 내 하드코딩된 `.png` 및 `.tscn` 참조 경로를 콜론(`:`)까지 포함해 100% 오차 없이 추출하는 검사기를 장착했습니다.
-- **에셋 위반 징계 연동 및 Reject 완비:** `art/metadata.json` 사이드카 조상 폴더 탐색기를 가동하여, 미등록된 가상 에셋의 무단 바인딩 감지 시 즉각 `exit 1`로 PR을 반려하고 Blinky 징계 API 연동으로 경고 1회를 적립하도록 구축했습니다.
-- **감사기 통합 테스트 신설 (tests/test_cto_review.py):** 정상 리소스 바인딩 패스 및 미등록 에셋 참조 위반 적발 검증용 2대 테스트를 완비하여, **프로젝트 전체 20개 테스트가 단 2.174초 만에 100% 성공(OK)**함을 증명했습니다.
-- **실전 dry-run 검수 통과:** 미등록 가상 에셋 `fake_nonexistent_sprite.png`를 참조시킨 모의 코드를 집행하여, 정확하게 Reject 되고 Blinky 경고 스택 누적 및 디스코드 징계 알림 임베드 브리핑이 유기적으로 흐름을 완벽히 최종 검수 완료했습니다.
+### ③ 사내 규칙 및 공식 명세서 튜닝 완비
+- **VIRTUAL_OFFICE.md [V5 개정]:** 가상 사옥 감사실 정보 스펙 및 **제4조 [게임 QA 자동화 규칙] (GUT Headless 자동화 검증 규정)** 신설 반영 완료.
+- **백엔드 인프라 명세서 [v1.6 판올림]:** `system_audit_logs` 테이블 스키마 DDL, Blinky QA 실패 징계 규정, 그리고 **4장: 가상 사옥 감사실 및 5대 지표 스코어링 명세** 섹션 신설 반영 완료.
 
 ---
 
 ## 2. ⚠️ 현재 마주한 에러 및 미해결 이슈
-- **Git Remote HTTP 401 curl 22:** 원격 푸시 단계에서 GitHub 권한 부족(401) 네트워크 경보가 확인되었으나, 로컬 작업 트리(`git status`)는 이미 백그라운드 스냅샷 데몬에 의해 **2개 앞선 커밋(`ahead by 2 commits`)으로 100% 안전하게 저장(working tree clean)**되었으므로 기능적 보존은 완벽합니다.
+- **Git Remote HTTPS Credential (Device not configured):** 원격 푸시 단계에서 HTTPS 크리덴셜 프롬프트 대기 한계선 오류가 확인되었으나, 로컬 작업 트리(`git status`)는 이미 백그라운드 스냅샷 데몬에 의해 **6개 앞선 커밋(`ahead by 6 commits`)으로 100% 안전하게 로컬 깃에 저장(working tree clean)**되었으므로 데이터 영속 보존은 완벽합니다.
 
 ---
 
 ## 3. 🎯 다음 세션에 이어서 해야 할 구체적인 목표와 할 일 (To-Do)
-- [ ] **[마일스톤 2] 실전 테트리스 모노레포 1차 프로토타입 릴리스 (실물 공정 돌입):**
-  - [ ] `Concept-Agent`를 소집해 격리 sandbox 폴더 `workspace/projects/game_01_tetris/concept/` 아래에 정규 그리드 테트리스 예외처리 기획 명세서 물리 작성.
-  - [ ] `Art-Agent` 턴을 가동해 `/api/art/generate` API로 ComfyUI를 찔러 고품질 UI/UX 시안 에셋 물리 렌더링 및 `metadata.json` 적재.
-  - [ ] `Dev-Agent`가 앞선 명세와 `art/metadata.json` 에 등록된 실물 PNG 리소스만 100% 임포트하여 작동 가능한 GDScript 소스코드 `dev/tetris.gd` 물리 코딩.
-  - [ ] 가상 CTO(`Claude-Code`)의 정밀 정적 AST 및 에셋 정합성 감사 통과 후 실물 1호기 원격 릴리스.
+
+### ① 게임 QA 단계 지속 강화 및 고도화 (Milestone 2.5)
+- [ ] **QA 2단계: 비주얼 회귀 테스트 (Visual QA) 아키텍처 연동**
+  - [ ] Godot 헤드리스 스크린샷 렌더링 캡처 스크립트 작성.
+  - [ ] Art-Agent가 Flux.1로 디자인한 오리지널 시안 이미지와 런타임 캡처 이미지 간의 픽셀/레이아웃 일치율 분석 및 Claude Vision API 정밀 시각 검수 자동화.
+- [ ] **QA 3단계: 지능형 QA 에이전트 (`QA-Agent`) 전담 페르소나 신설**
+  - [ ] 기획 스키마를 파싱하여 극단적 엣지 케이스 테스트 시나리오를 자동 도출하는 지능형 테스팅 프레임워크 수립.
+
+### ② 실전 테트리스 모노레포 1차 프로토타입 릴리스 (Milestone 3 - 실물 공정 돌입)
+- [ ] `Concept-Agent`를 소집해 격리 sandbox 폴더 `workspace/projects/game_01_tetris/concept/` 아래에 정규 그리드 테트리스 예외처리 기획 명세서 물리 작성.
+- [ ] `Art-Agent` 턴을 가동해 `/api/art/generate` API로 ComfyUI를 찔러 고품질 UI/UX 시안 에셋 물리 렌더링 및 `metadata.json` 적재.
+- [ ] `Dev-Agent`가 앞선 명세와 `art/metadata.json` 에 등록된 실물 PNG 리소스만 100% 임포트하여 작동 가능한 GDScript 소스코드 `dev/tetris.gd` 물리 코딩.
+- [ ] 가상 CTO(`Claude-Code`)의 정밀 정적 AST 및 에셋 정합성 감사, 그리고 GUT QA 자동 통과 확인 후 실물 1호기 원격 릴리스.
