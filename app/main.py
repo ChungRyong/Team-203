@@ -8,6 +8,7 @@ import time
 import random
 import shutil
 import requests
+import glob
 
 # Ensure the app package is in the import path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,64 +18,73 @@ from app.database import run_git_snapshot
 from app.blinky_middleware import check_and_compress_context
 from app.penalties import enforce_penalty_check, get_agent_system_prompt, enforce_pardon_agent
 from config.settings import OLLAMA_CHAT_URL
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Double check tables are initialized
+    database.create_tables()
+    yield
 
 app = FastAPI(
     title="Team-203 Virtual Office Meeting Room Engine",
     description="FastAPI + SQLite Lightweight Dialogue Server with Blinky Context Compression Middleware",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # --- PYDANTIC SCHEMAS ---
 
 class TaskCreate(BaseModel):
-    task_id: str = Field(..., example="TASK-20260525-01")
-    title: str = Field(..., example="테트리스 게임 기본 개발")
-    description: Optional[str] = Field(None, example="Godot 4.2+ 엔진을 이용한 테트리스 웹 게임 프로토타입 작성")
-    status: Optional[str] = Field("PENDING", example="PENDING")
+    task_id: str = Field(..., json_schema_extra={"example": "TASK-20260525-01"})
+    title: str = Field(..., json_schema_extra={"example": "테트리스 게임 기본 개발"})
+    description: Optional[str] = Field(None, json_schema_extra={"example": "Godot 4.2+ 엔진을 이용한 테트리스 웹 게임 프로토타입 작성"})
+    status: Optional[str] = Field("PENDING", json_schema_extra={"example": "PENDING"})
 
 class RoomCreate(BaseModel):
-    room_id: str = Field(..., example="tf_concept_dev_01")
-    room_name: str = Field(..., example="기획-개발 협업 TF룸")
-    task_id: str = Field(..., example="TASK-20260525-01")
-    allowed_agents: List[str] = Field(..., example=["Concept-Agent", "Dev-Agent"])
+    room_id: str = Field(..., json_schema_extra={"example": "tf_concept_dev_01"})
+    room_name: str = Field(..., json_schema_extra={"example": "기획-개발 협업 TF룸"})
+    task_id: str = Field(..., json_schema_extra={"example": "TASK-20260525-01"})
+    allowed_agents: List[str] = Field(..., json_schema_extra={"example": ["Concept-Agent", "Dev-Agent"]})
 
 class MessageCreate(BaseModel):
-    sender_role: str = Field(..., example="Dev-Agent")
-    content: str = Field(..., example="테트리스 블록 강하 로직 구현 완료했습니다.")
-    payload_type: Optional[str] = Field("TEXT", example="TEXT")
+    sender_role: str = Field(..., json_schema_extra={"example": "Dev-Agent"})
+    content: str = Field(..., json_schema_extra={"example": "테트리스 블록 강하 로직 구현 완료했습니다."})
+    payload_type: Optional[str] = Field("TEXT", json_schema_extra={"example": "TEXT"})
 
 class PenalizeRequest(BaseModel):
-    reason: str = Field(..., example="가상 함수 날조 및 린트 검증 실패")
+    reason: str = Field(..., json_schema_extra={"example": "가상 함수 날조 및 린트 검증 실패"})
     
 class PromptRequest(BaseModel):
-    base_prompt: str = Field(..., example="당신은 수석 엔지니어입니다. 코드를 구현해 주세요.")
+    base_prompt: str = Field(..., json_schema_extra={"example": "당신은 수석 엔지니어입니다. 코드를 구현해 주세요."})
 
 class VramUnloadRequest(BaseModel):
-    model: str = Field(..., example="qwen3.6:35b-mlx")
+    model: str = Field(..., json_schema_extra={"example": "qwen3.6:35b-mlx"})
 
 class ArtGenerateRequest(BaseModel):
-    project_id: str = Field(..., example="game_01_tetris")
-    asset_type: str = Field(..., example="UI_WIREFRAME")
-    prompt: str = Field(..., example="neon tetris grid board game UI layout")
-    seed: Optional[int] = Field(-1, example=-1)
+    project_id: str = Field(..., json_schema_extra={"example": "game_01_tetris"})
+    asset_type: str = Field(..., json_schema_extra={"example": "UI_WIREFRAME"})
+    prompt: str = Field(..., json_schema_extra={"example": "neon tetris grid board game UI layout"})
+    seed: Optional[int] = Field(-1, json_schema_extra={"example": -1})
 
 class AuditLogCreate(BaseModel):
-    event_type: str = Field(..., example="VRAM_UNLOAD")
-    status: str = Field(..., example="SUCCESS")
-    details: Optional[dict] = Field(None, example={"model": "qwen3.6:35b-mlx"})
-    elapsed_ms: Optional[int] = Field(None, example=120)
+    event_type: str = Field(..., json_schema_extra={"example": "VRAM_UNLOAD"})
+    status: str = Field(..., json_schema_extra={"example": "SUCCESS"})
+    details: Optional[dict] = Field(None, json_schema_extra={"example": {"model": "qwen3.6:35b-mlx"}})
+    elapsed_ms: Optional[int] = Field(None, json_schema_extra={"example": 120})
 
 class QaVerifyRequest(BaseModel):
-    task_id: str = Field(..., example="TASK-QA-01")
-    test_suite_name: str = Field(..., example="Tetromino_Fall_Edge_Cases")
-    total_cases: int = Field(..., example=20)
-    passed_cases: int = Field(..., example=19)
-    failed_cases: int = Field(..., example=1)
+    task_id: str = Field(..., json_schema_extra={"example": "TASK-QA-01"})
+    test_suite_name: str = Field(..., json_schema_extra={"example": "Tetromino_Fall_Edge_Cases"})
+    total_cases: int = Field(..., json_schema_extra={"example": 20})
+    passed_cases: int = Field(..., json_schema_extra={"example": 19})
+    failed_cases: int = Field(..., json_schema_extra={"example": 1})
+    elapsed_ms: Optional[int] = Field(None, json_schema_extra={"example": 450})
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = Field(None, example="테트리스 게임 기본 개발 수정")
-    description: Optional[str] = Field(None, example="Godot 4.2+ 엔진을 이용한 정교한 물리 연동")
-    status: Optional[str] = Field(None, example="PASSED_WITHOUT_CLAUDE")
+    title: Optional[str] = Field(None, json_schema_extra={"example": "테트리스 게임 기본 개발 수정"})
+    description: Optional[str] = Field(None, json_schema_extra={"example": "Godot 4.2+ 엔진을 이용한 정교한 물리 연동"})
+    status: Optional[str] = Field(None, json_schema_extra={"example": "PASSED_WITHOUT_CLAUDE"})
 
 class TaskResponse(BaseModel):
     task_id: str
@@ -104,10 +114,7 @@ class MessageResponse(BaseModel):
 
 # --- API ENDPOINTS ---
 
-@app.on_event("startup")
-def startup_event():
-    # Double check tables are initialized
-    database.create_tables()
+
 
 @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
 def create_task(task: TaskCreate):
@@ -387,7 +394,7 @@ def pardon_agent(agent_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 class CtoReviewConfigRequest(BaseModel):
-    enabled: bool = Field(..., example=False)
+    enabled: bool = Field(..., json_schema_extra={"example": False})
 
 @app.get("/api/config/cto-review")
 def get_cto_review_config():
@@ -422,7 +429,6 @@ def generate_art(req: ArtGenerateRequest):
     
     # 2. Determine target filename based on index
     index = 1
-    import glob
     existing = glob.glob(os.path.join(target_dir, f"{req.asset_type.lower()}_*.png"))
     if existing:
         index = len(existing) + 1
@@ -473,7 +479,7 @@ def generate_art(req: ArtGenerateRequest):
                                 if not os.path.exists(comfy_output_dir):
                                     comfy_output_dir = os.path.join(base_dir, "ComfyUI", "output")
                                 if not os.path.exists(comfy_output_dir):
-                                    comfy_output_dir = "output"
+                                    comfy_output_dir = os.path.join(base_dir, "output")
                                 src_path = os.path.join(comfy_output_dir, filename)
                                 if os.path.exists(src_path):
                                     shutil.copy(src_path, target_filepath)
@@ -583,11 +589,12 @@ def post_qa_verify(req: QaVerifyRequest):
             "success_rate": round(success_rate, 2)
         }
         
+        actual_elapsed_ms = req.elapsed_ms if req.elapsed_ms is not None else random.randint(200, 1500)
         database.add_audit_log(
             event_type="GAME_QA",
             status=status_str,
             details=details,
-            elapsed_ms=random.randint(200, 1500) # Simulating GUT Execution Time
+            elapsed_ms=actual_elapsed_ms
         )
         
         return {
