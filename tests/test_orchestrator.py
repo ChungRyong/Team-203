@@ -17,7 +17,7 @@ class TestOrchestrator(unittest.TestCase):
         self.task_id = "TASK-TEST-777"
         self.room_id = "tf_room_test_777"
         self.room_name = "테스트 격리방"
-        self.allowed_agents = ["Concept-Agent", "Dev-Agent"]
+        self.allowed_agents = ["Concept-Agent", "Art-Agent", "Dev-Agent"]
         self.orchestrator = VirtualStudioOrchestrator(
             self.task_id, self.room_id, self.room_name, self.allowed_agents
         )

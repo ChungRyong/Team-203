@@ -259,7 +259,7 @@ def main():
     # Instance Configuration representing dynamic sequential Tetris development
     room_id = f"tf_tetris_{task_id.replace('-', '_').lower()}"
     room_name = f"테트리스 모노레포 개발 격리 TF룸 [{task_id}]"
-    allowed_agents = ["Concept-Agent", "Dev-Agent"]
+    allowed_agents = ["Concept-Agent", "Art-Agent", "Dev-Agent"]
     
     orchestrator = VirtualStudioOrchestrator(task_id, room_id, room_name, allowed_agents)
     
@@ -278,7 +278,34 @@ def main():
     concept_output = orchestrator.run_agent_turn("Concept-Agent", concept_prompt, "qwen3.6:35b-mlx")
     orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload to clear cache
     
-    # 3. Dev-Agent 개발 및 코딩 Turn
+    # 3. Art-Agent 디자인 시안 및 에셋 프롬프트 도출 Turn
+    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # ensure clean VRAM
+    art_prompt = (
+        "당신은 Team-203의 테크니컬 아티스트 Art-Agent입니다.\n"
+        "시니어 기획자의 명세서를 기반으로, ComfyUI API(Flux.1)를 구동하여 완벽한 와이어프레임과 UI/UX 에셋을 그리기 위한 정밀한 영문 이미지 생성 프롬프트를 1줄의 텍스트로 도출하십시오.\n"
+        "가상의 아티스틱 효과를 날조하지 마십시오."
+    )
+    art_output_prompt = orchestrator.run_agent_turn("Art-Agent", art_prompt, "qwen3.6:35b-mlx")
+    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload to clear cache before ComfyUI
+    
+    # ComfyUI 이미지 생성 API 연동 실행
+    orchestrator.log("🎨 [Art Generator] Triggering ComfyUI /api/art/generate pipeline...")
+    art_payload = {
+        "project_id": "game_01_tetris",
+        "asset_type": "UI_WIREFRAME",
+        "prompt": art_output_prompt if art_output_prompt else "neon tetris grid board game UI layout",
+        "seed": -1
+    }
+    art_res = orchestrator.call_api("POST", "/art/generate", art_payload)
+    art_status = "FAILED"
+    if art_res and art_res.status_code in [200, 201]:
+        art_data = art_res.json()
+        art_status = f"{art_data.get('filename')} ({art_data.get('status')})"
+        orchestrator.log(f"✅ Art-Agent Asset Generated: {art_status}")
+    else:
+        orchestrator.log("❌ Failed to generate art asset programmatically.")
+        
+    # 4. Dev-Agent 개발 및 코딩 Turn
     dev_prompt = (
         "당신은 Team-203의 수석 엔지니어 Dev-Agent입니다.\n"
         "시니어 기획자의 명세서를 기반으로, 오직 Godot 4.2+에 부합하는 완벽한 작동 가능 GDScript 코드만 작성하십시오.\n"
@@ -287,7 +314,7 @@ def main():
     dev_output = orchestrator.run_agent_turn("Dev-Agent", dev_prompt, "qwen3.6:35b-mlx")
     orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload after dev coding
     
-    # 4. CTO 에이전트 정밀 코드 리뷰 집행 (Dev-Agent 코딩 완료 시점)
+    # 5. CTO 에이전트 정밀 코드 리뷰 집행 (Dev-Agent 코딩 완료 시점)
     # We specify a target test python file in dev sandbox to audit
     target_dev_file = "calc_sample.py" # sample mockup file
     test_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), target_dev_file)
@@ -306,9 +333,10 @@ def main():
         except Exception:
             pass
             
-    # 5. Finalize & Broadcast
+    # 6. Finalize & Broadcast
     milestone_summary = (
         f"- **기획서 요약:** Godot 4.2+ 그리드 기반 10x20 보드 및 테트로미노 낙하 명세 완성.\n"
+        f"- **아트에셋 결과:** {art_status} 생성 배치 완료.\n"
         f"- **개발코드 요약:** `sample_run()` GDScript 테트리스 보드 시드 연동 완료.\n"
         f"- **CTO 리뷰 결과:** {review_status} 통과 완료."
     )

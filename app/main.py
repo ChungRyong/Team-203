@@ -3,6 +3,11 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import sys
 import os
+import json
+import time
+import random
+import shutil
+import requests
 
 # Ensure the app package is in the import path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,6 +51,12 @@ class PromptRequest(BaseModel):
 
 class VramUnloadRequest(BaseModel):
     model: str = Field(..., example="qwen3.6:35b-mlx")
+
+class ArtGenerateRequest(BaseModel):
+    project_id: str = Field(..., example="game_01_tetris")
+    asset_type: str = Field(..., example="UI_WIREFRAME")
+    prompt: str = Field(..., example="neon tetris grid board game UI layout")
+    seed: Optional[int] = Field(-1, example=-1)
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, example="테트리스 게임 기본 개발 수정")
@@ -362,3 +373,135 @@ def update_cto_review_config(req: CtoReviewConfigRequest):
         "cto_review_enabled": req.enabled,
         "message": f"CTO dynamic code review has been successfully turned {'ON' if req.enabled else 'OFF'}."
     }
+
+@app.post("/api/art/generate")
+def generate_art(req: ArtGenerateRequest):
+    # 1. Base directory and target path
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    target_dir = os.path.join(base_dir, "workspace", "projects", req.project_id, "art")
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # 2. Determine target filename based on index
+    index = 1
+    import glob
+    existing = glob.glob(os.path.join(target_dir, f"{req.asset_type.lower()}_*.png"))
+    if existing:
+        index = len(existing) + 1
+    target_filename = f"{req.asset_type.lower()}_{index:02d}.png"
+    target_filepath = os.path.join(target_dir, target_filename)
+    
+    # 3. Resolve seed
+    seed_val = req.seed
+    if seed_val == -1:
+        seed_val = random.randint(1, 2147483647)
+        
+    # 4. Load ComfyUI workflow template
+    workflow_path = os.path.join(base_dir, "config", "comfyui_workflow_flux.json")
+    workflow_data = {}
+    if os.path.exists(workflow_path):
+        try:
+            with open(workflow_path, "r", encoding="utf-8") as f:
+                workflow_str = f.read()
+                workflow_str = workflow_str.replace("{{POSITIVE_PROMPT}}", req.prompt)
+                workflow_data = json.loads(workflow_str)
+                if "3" in workflow_data and "inputs" in workflow_data["3"]:
+                    workflow_data["3"]["inputs"]["seed"] = seed_val
+        except Exception:
+            pass
+            
+    is_fallback = False
+    fallback_reason = ""
+    
+    # 5. Attempt ComfyUI API communication (Fail-Safe wrapper)
+    comfyui_url = "http://localhost:8188"
+    try:
+        prompt_res = requests.post(f"{comfyui_url}/prompt", json={"prompt": workflow_data}, timeout=5)
+        if prompt_res.status_code == 200:
+            prompt_id = prompt_res.json().get("prompt_id")
+            
+            completed = False
+            for _ in range(5):
+                time.sleep(2)
+                history_res = requests.get(f"{comfyui_url}/history/{prompt_id}", timeout=5)
+                if history_res.status_code == 200 and history_res.json():
+                    history_data = history_res.json().get(prompt_id, {})
+                    outputs = history_data.get("outputs", {})
+                    for node_id, node_out in outputs.items():
+                        if "images" in node_out:
+                            for img in node_out["images"]:
+                                filename = img.get("filename")
+                                comfy_output_dir = os.path.join(os.path.dirname(base_dir), "ComfyUI", "output")
+                                if not os.path.exists(comfy_output_dir):
+                                    comfy_output_dir = "output"
+                                src_path = os.path.join(comfy_output_dir, filename)
+                                if os.path.exists(src_path):
+                                    shutil.copy(src_path, target_filepath)
+                                    completed = True
+                                    break
+                    if completed:
+                        break
+            if not completed:
+                is_fallback = True
+                fallback_reason = "ComfyUI prompt completed but output image could not be resolved from output folder."
+        else:
+            is_fallback = True
+            fallback_reason = f"ComfyUI prompt API returned error status: {prompt_res.status_code}"
+    except Exception as e:
+        is_fallback = True
+        fallback_reason = f"ComfyUI offline or connection failed: {e}"
+        
+    # 6. Apply Fail-Safe Placeholder copy if fallback is active
+    if is_fallback:
+        tiny_png_bin = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x01\x00\x00\x0c\x00\x01\x07\xcd\xf3\xb0\x00\x00\x00\x00IEND\xaeB`\x82'
+        try:
+            with open(target_filepath, "wb") as f:
+                f.write(tiny_png_bin)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to write mock image: {e}")
+            
+    # 7. Write/Update metadata.json
+    metadata_path = os.path.join(target_dir, "metadata.json")
+    metadata = {"assets": []}
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+        except Exception:
+            pass
+            
+    asset_entry = {
+        "filename": target_filename,
+        "asset_type": req.asset_type,
+        "prompt": req.prompt,
+        "seed": seed_val,
+        "sampler": "euler",
+        "scheduler": "normal",
+        "steps": 20,
+        "is_fallback": is_fallback,
+        "fallback_reason": fallback_reason if is_fallback else None,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    metadata["assets"].append(asset_entry)
+    
+    try:
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update metadata.json: {e}")
+        
+    if is_fallback:
+        return {
+            "status": "warning",
+            "filename": target_filename,
+            "filepath": target_filepath,
+            "message": f"ComfyUI offline ({fallback_reason}). Bypassed with tiny PNG mockup.",
+            "metadata": asset_entry
+        }
+    else:
+        return {
+            "status": "success",
+            "filename": target_filename,
+            "filepath": target_filepath,
+            "message": "Art asset generated and saved successfully via ComfyUI.",
+            "metadata": asset_entry
+        }
