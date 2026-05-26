@@ -2,8 +2,60 @@
 import os
 import sys
 import ast
+import json
+import re
 import requests
 import subprocess
+
+def get_registered_assets(filepath):
+    """
+    Traverses upwards from the inspected file's path to find art/metadata.json,
+    and returns a list of registered asset filenames.
+    Traverses up to 4 levels.
+    """
+    dirpath = os.path.abspath(filepath)
+    if os.path.isfile(dirpath):
+        dirpath = os.path.dirname(dirpath)
+        
+    for _ in range(4):
+        metadata_path = os.path.join(dirpath, "art", "metadata.json")
+        if os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return [asset.get("filename") for asset in data.get("assets", [])]
+            except Exception:
+                pass
+        dirpath = os.path.dirname(dirpath)
+    return []
+
+def check_asset_violations(filepath, registered_assets):
+    """
+    Extracts all PNG/TSCN asset references inside source file
+    and checks if they exist in the registered assets list.
+    Only audits files starting with art prefixes or explicitly inside art/.
+    """
+    if not registered_assets:
+        return []
+        
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+        
+    asset_refs = re.findall(r'[\w/._-]+\.(?:png|tscn)', content)
+    
+    violations = []
+    for ref in asset_refs:
+        filename = os.path.basename(ref)
+        is_art_asset = "art/" in ref.lower() or filename.startswith(("ui_wireframe", "sprite", "game_background"))
+        
+        if is_art_asset and filename not in registered_assets:
+            violations.append({
+                "file": filepath,
+                "reference": ref,
+                "filename": filename
+            })
+            
+    return violations
 
 # Use environment variable to toggle base URL or fallback to standard port
 PORT = os.environ.get("TEAM203_PORT", "8000")
@@ -175,12 +227,12 @@ def main():
     
     violations = []
     if os.path.isfile(target_path):
-        if target_path.endswith(".py"):
+        if target_path.endswith((".py", ".gd")):
             violations = analyze_file(target_path)
     else:
         for root, _, files in os.walk(target_path):
             for file in files:
-                if file.endswith(".py"):
+                if file.endswith((".py", ".gd")):
                     filepath = os.path.join(root, file)
                     violations.extend(analyze_file(filepath))
                     
@@ -197,6 +249,37 @@ def main():
         sys.exit(1)
         
     print("✅ [AST Review] Local function length checks PASSED. (All functions <= 50 lines)")
+
+    # 2.5 에셋 날조 정적 감사 (Visual Hallucination Audit)
+    print("🎨 [Asset Audit] Auditing design resource and image path bindings...")
+    asset_violations = []
+    
+    registered = get_registered_assets(target_path)
+    if registered:
+        print(f"📦 [Asset Audit] Found {len(registered)} registered assets in metadata.json.")
+        
+    if os.path.isfile(target_path):
+        if target_path.endswith((".py", ".gd")):
+            asset_violations = check_asset_violations(target_path, registered)
+    else:
+        for root, _, files in os.walk(target_path):
+            for file in files:
+                if file.endswith((".py", ".gd")):
+                    filepath = os.path.join(root, file)
+                    asset_violations.extend(check_asset_violations(filepath, registered))
+                    
+    if asset_violations:
+        print("\n⛔ [CTO REJECT] Unregistered Art Asset Reference Detected! ⛔")
+        for av in asset_violations:
+            print(f"  • File: {av['file']} | Unregistered Reference: '{av['reference']}' (Filename: {av['filename']})")
+        print("\n👉 모든 이미지 및 디자인 리소스는 반드시 Art-Agent를 통해 생성되어 art/metadata.json에 정식 등록되어 있어야 합니다.")
+        
+        # Blinky 징계 API 연동 (경고 1회)
+        reason = f"미등록 디자인 리소스 무단 바인딩 적발: {asset_violations[0]['file']} -> '{asset_violations[0]['reference']}'"
+        trigger_blinky_penalty(reason)
+        sys.exit(1)
+        
+    print("✅ [Asset Audit] Visual resource bindings verified successfully. (No unregistered assets found)")
     
     # 3. 👑 5층 CTO Claude CLI 호출 및 Fail-Safe 활성화
     cto_status = run_claude_review_cli()

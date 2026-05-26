@@ -2,6 +2,7 @@ import unittest
 import sys
 import os
 import shutil
+import json
 from unittest.mock import patch, MagicMock
 
 # Append absolute path to current workspace root to run tests properly
@@ -117,6 +118,85 @@ class TestCtoReview(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 main()
             self.assertEqual(cm.exception.code, 0) # Bypassed and succeeded!
+
+    def test_asset_audit_success(self):
+        # 1. Setup mock art directory and metadata.json inside test sandbox
+        art_dir = os.path.join(self.test_dir, "art")
+        os.makedirs(art_dir, exist_ok=True)
+        
+        metadata_path = os.path.join(art_dir, "metadata.json")
+        mock_meta = {
+            "assets": [
+                {"filename": "ui_wireframe_01.png", "asset_type": "UI_WIREFRAME"},
+                {"filename": "sprite_block_01.png", "asset_type": "SPRITE"}
+            ]
+        }
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(mock_meta, f)
+            
+        # 2. Write a clean source code that references only registered assets
+        dev_dir = os.path.join(self.test_dir, "dev")
+        os.makedirs(dev_dir, exist_ok=True)
+        filepath = os.path.join(dev_dir, "tetris_clean.py")
+        code = (
+            "def load_game_assets():\n"
+            "    logo = 'art/ui_wireframe_01.png'\n"
+            "    block = 'res://art/sprite_block_01.png'\n"
+            "    return logo, block\n"
+        )
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(code)
+            
+        from run_cto_review import get_registered_assets, check_asset_violations
+        
+        # 3. Check registered list
+        registered = get_registered_assets(filepath)
+        self.assertEqual(len(registered), 2)
+        self.assertIn("ui_wireframe_01.png", registered)
+        self.assertIn("sprite_block_01.png", registered)
+        
+        # 4. Check violations (Should be zero!)
+        violations = check_asset_violations(filepath, registered)
+        self.assertEqual(len(violations), 0)
+
+    def test_asset_audit_failure_unregistered_asset(self):
+        # 1. Setup metadata.json
+        art_dir = os.path.join(self.test_dir, "art")
+        os.makedirs(art_dir, exist_ok=True)
+        
+        metadata_path = os.path.join(art_dir, "metadata.json")
+        mock_meta = {
+            "assets": [
+                {"filename": "ui_wireframe_01.png", "asset_type": "UI_WIREFRAME"}
+            ]
+        }
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(mock_meta, f)
+            
+        # 2. Write code with unregistered asset 'sprite_fake_block.png'
+        dev_dir = os.path.join(self.test_dir, "dev")
+        os.makedirs(dev_dir, exist_ok=True)
+        filepath = os.path.join(dev_dir, "tetris_dirty.py")
+        code = (
+            "def load_assets():\n"
+            "    # Registered!\n"
+            "    ok_ui = 'art/ui_wireframe_01.png'\n"
+            "    # Unregistered design asset (Hallucination!)\n"
+            "    fake_block = 'res://art/sprite_fake_block.png'\n"
+            "    return ok_ui, fake_block\n"
+        )
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(code)
+            
+        from run_cto_review import get_registered_assets, check_asset_violations
+        
+        registered = get_registered_assets(filepath)
+        violations = check_asset_violations(filepath, registered)
+        
+        # Should detect 1 violation
+        self.assertEqual(len(violations), 1)
+        self.assertEqual(violations[0]["filename"], "sprite_fake_block.png")
+        self.assertEqual(violations[0]["reference"], "res://art/sprite_fake_block.png")
 
 if __name__ == "__main__":
     unittest.main()
