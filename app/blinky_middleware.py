@@ -11,7 +11,7 @@ from app.database import (
 from app.discord_relay import send_discord_log
 
 from config.settings import OLLAMA_GENERATE_URL
-MODEL_NAME = "gemma4:4b-mlx"
+MODEL_NAME = "gemma4:31b-mlx"
 
 def call_blinky_summarizer(transcript_str):
     """

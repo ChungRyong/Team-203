@@ -23,7 +23,9 @@ curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash && hermes set
 위 1단계 명령어가 성공하여 디스코드 DM 또는 터미널을 통해 PM `Hermes`가 연결되면, 대표님께서는 편안하게 의자에 기대어 디스코드 DM으로 **수석 PM에게 다음 한 줄의 마스터 명령만 하달**해 주십시오.
 
 > 💬 **대표님 지시:** 
-> `"Hermes, M5 Pro Max 로컬 장비에 Ollama 설치, qwen3.6:35b-mlx, gemma4:31b-mlx, gemma4:4b-mlx 최적화 모델들 풀링, ComfyUI 그래픽 엔진 셋업, 백엔드 SQLite 데이터베이스 시딩 및 오케스트레이터 최초 가동까지 전체 사옥 인프라를 자율 프로비저닝(셋업)해라."`
+> `"Hermes, M5 Pro Max 로컬 장비에 Ollama 설치, qwen3.6:35b-mlx 및 gemma4:31b-mlx 최적화 모델들 풀링, ComfyUI 그래픽 엔진 셋업, 백엔드 SQLite 데이터베이스 시딩 및 오케스트레이터 최초 가동까지 전체 사옥 인프라를 자율 프로비저닝(셋업)해라."`
+>
+> *(기존 4B 경량 모델은 제거하고, 운영 지원 주임 Blinky 역시 PM과 동일한 고품질 **`gemma4:31b-mlx`** 모델을 공유하게 설계하여 VRAM 점유량을 극적으로 줄이면서도 파싱 및 요약 품질을 대폭 끌어올렸습니다!)*
 
 ---
 
@@ -33,7 +35,7 @@ curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash && hermes set
 ```mermaid
 graph TD
     A["대표님의 셋업 지시 수령<br>(디스코드 DM)"] --> B["1. Mac 환경 진단 및 Brew/Python 검사"]
-    B --> C["2. Ollama 설치 및 MLX 삼각 편대<br>(qwen3.6:35b / gemma4:31b / gemma4:4b) 풀링"]
+    B --> C["2. Ollama 설치 및 MLX 정예 편대<br>(qwen3.6:35b / gemma4:31b) 풀링"]
     C --> D["3. ComfyUI 클론 및 Flux.1 가중치 배치"]
     D --> E["4. Team-203 백엔드 venv 구축 및 DB 시딩"]
     E --> F["5. 오케스트레이터 가동 및 대표실로 완료 보고"]
