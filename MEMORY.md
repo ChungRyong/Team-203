@@ -14,7 +14,7 @@
 - **[Medium] 완료 보고 100% 하드코딩 → 동적 API 조회로 전환:** `GET /api/audit/summary` 실시간 쿼리 결과로 5대 건강성 지표를 동적 구성하도록 안내하여 허위 보고를 원천 차단했습니다.
 - **[Low] `kill -9` 즉시 사용 → SIGTERM(-15) 선행 후 SIGKILL(-9) 최후 수단 패턴으로 교체:** 데이터 손실 위험을 제거했습니다.
 - **[Low] Python 버전 3.11 → 3.13으로 업데이트:** 현재 개발 환경(Python 3.13) 기준으로 수정하고 `brew link --overwrite` 명령을 추가했습니다.
-- **[이전 세션 잔재 수정] 잘못된 프로젝트 경로 2곳 교정:** 이전 세션이 남긴 `/Users/jabiseu/Documents/workspace/Team-203` 경로를 올바른 `/Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203`로 일괄 교정했습니다.
+- **[이전 세션 잔재 수정] 잘못된 프로젝트 경로 교정:** 이전 세션이 남긴 `/Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203` 경로를 사용자가 지정한 올바른 `/Users/jabiseu/Documents/workspace/Team-203` 경로로 일괄 교정했습니다.
 - **커밋:** `b0f803a` — `docs: fix PM provisioning guide — 8 issues resolved`
 
 ---
