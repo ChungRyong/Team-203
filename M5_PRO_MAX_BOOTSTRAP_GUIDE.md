@@ -30,7 +30,7 @@ curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash && hermes set
 ---
 
 ## 📊 [PM Hermes의 자율 집행 프로세스 (무인화 진행)]
-대표님의 마스터 지시를 수령한 PM `Hermes`는 [PM_AGENT_INFRA_PROVISIONING_GUIDE.md](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/PM_AGENT_INFRA_PROVISIONING_GUIDE.md) 매뉴얼을 쉘에서 스스로 독파하여 M5 Pro Max의 터미널을 직접 조작해 다음 업무를 순차 처리합니다.
+대표님의 마스터 지시를 수령한 PM `Hermes`는 [PM_AGENT_INFRA_PROVISIONING_GUIDE.md](file:///Users/jabiseu/Documents/workspace/Team-203/PM_AGENT_INFRA_PROVISIONING_GUIDE.md) 매뉴얼을 쉘에서 스스로 독파하여 M5 Pro Max의 터미널을 직접 조작해 다음 업무를 순차 처리합니다.
 
 ```mermaid
 graph TD
