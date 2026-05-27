@@ -15,7 +15,8 @@
 - **[Low] `kill -9` 즉시 사용 → SIGTERM(-15) 선행 후 SIGKILL(-9) 최후 수단 패턴으로 교체:** 데이터 손실 위험을 제거했습니다.
 - **[Low] Python 버전 3.11 → 3.13으로 업데이트:** 현재 개발 환경(Python 3.13) 기준으로 수정하고 `brew link --overwrite` 명령을 추가했습니다.
 - **[이전 세션 잔재 수정] 잘못된 프로젝트 경로 교정:** 이전 세션이 남긴 `/Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203` 경로를 사용자가 지정한 올바른 `/Users/jabiseu/Documents/workspace/Team-203` 경로로 일괄 교정했습니다.
-- **커밋:** `b0f803a` — `docs: fix PM provisioning guide — 8 issues resolved`
+- **커밋:** `3a60758` — `docs: update project path to workspace and align memory`
+- **[마일스톤 2.6 - Keychain 프리패스 수립 🌟]** 대표님의 키체인 접근 제어 설정을 통해 Antigravity 에이전트 전용의 osxkeychain 영구 항상 허용(Always Allow) 프리패스를 구축 완료하여, 백그라운드 100% 무인 자율 깃 푸시(Auto-Push) 환경을 마침내 확보했습니다.
 
 ---
 
