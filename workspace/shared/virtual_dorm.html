@@ -61,16 +61,14 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // 🌟 프리미엄 모노크롬 레트로 터미널 컬러 팔레트
+        // 🌟 프리미엄 모노크롬 녹색 인광 터미널 컬러 팔레트 (Single Monochrome Green CRT)
         const COLORS = {
             hermes: '#00B33C',      // 클래식 어두운 녹색 인광 (PM Hermes)
-            blinky: '#00CCFF',      // 레트로 터미널 사이언 (Blinky)
-            devAgent: '#FF9900',    // 레트로 터미널 앰버 (Dev-Agent)
-            warn: '#FF073A',        // 네온 레드 (징계용)
-            bubbleBg: 'rgba(15, 15, 20, 0.95)',
-            bubbleBorder: 'rgba(255, 255, 255, 0.12)',
-            bubbleText: '#E2E8F0',
-            sysStats: '#4A5568'
+            warn: '#FF073A',        // 네온 레드 (경고용)
+            bubbleBg: 'rgba(0, 0, 0, 0.95)', // OLED 리얼 블랙 배경
+            bubbleBorder: 'rgba(0, 179, 60, 0.4)', // 인광 녹색 테두리
+            bubbleText: '#00B33C',  // 인광 녹색 텍스트
+            sysStats: '#00B33C'
         };
 
         // 📡 API 상태 관제 변수
@@ -109,20 +107,22 @@
                 this.x = startX;
                 this.y = startY;
                 this.radius = 24; // 물리 경계 반사용 크기
-                this.vx = (Math.random() - 0.5) * 1.5; // 아장아장 걷는 속도에 최적화
-                this.vy = (Math.random() - 0.5) * 1.5;
+                // 아장아장 걷는 속도에 최적화 (좌우 방향만 부여)
+                this.vx = (Math.random() > 0.5 ? 1 : -1) * 1.2; 
+                this.vy = 0; // 상하 속도는 0으로 고정
                 this.diagTimer = Math.random() * 50; // 대사 타이밍
                 this.currentDiag = "";
                 this.diagLife = 0;
                 this.walkFrame = 0; // 걷기 애니메이션 프레임 토글러
-                this.direction = 'DOWN'; // 초기 방향
+                this.direction = this.vx > 0 ? 'RIGHT' : 'LEFT'; // 초기 방향
             }
 
             update(width, height) {
                 this.x += this.vx;
-                this.y += this.vy;
+                // 세로 위치는 화면 정중앙 고정
+                this.y = height * 0.5;
 
-                // 벽 충돌 탄성 반사
+                // 벽 충돌 탄성 반사 (좌우 벽만 반사)
                 if (this.x - this.radius < 0) {
                     this.x = this.radius;
                     this.vx = -this.vx;
@@ -131,28 +131,16 @@
                     this.x = width - this.radius;
                     this.vx = -this.vx;
                 }
-                if (this.y - this.radius < 0) {
-                    this.y = this.radius;
-                    this.vy = -this.vy;
-                }
-                if (this.y + this.radius > height) {
-                    this.y = height - this.radius;
-                    this.vy = -this.vy;
-                }
 
-                // 속도 벡터에 기초한 실시간 시선 방향 판정
-                if (Math.abs(this.vx) > Math.abs(this.vy)) {
-                    this.direction = this.vx > 0 ? 'RIGHT' : 'LEFT';
-                } else {
-                    this.direction = this.vy > 0 ? 'DOWN' : 'UP';
-                }
+                // 속도 벡터에 기초한 실시간 시선 방향 판정 (상하 차단)
+                this.direction = this.vx > 0 ? 'RIGHT' : 'LEFT';
 
                 // 걷는 발 모양 애니메이션 프레임 카운트 (10 FPS 에코 루프 연동)
                 this.walkFrame = (this.walkFrame + 1) % 2;
 
                 // 대사 주기 스케줄링
                 this.diagTimer++;
-                if (this.diagTimer > 120) { // 약 12초마다 대사 변경
+                if (this.diagTimer > 100) { // 약 10초마다 대사 변경
                     this.triggerDialogue();
                     this.diagTimer = 0;
                 }
@@ -165,42 +153,30 @@
             }
 
             triggerDialogue() {
-                // 📡 대표님 명화 기획: 좌측 상단 고정 텍스트를 제거하고 캐릭터들이 돌아다니며 실시간 상태 브리핑!
+                // 📡 대표님 명화 기획: 단일 순찰 로봇이 전체 시스템의 관제 데이터를 동적으로 브리핑!
                 if (globalStats.lastUpdated !== '연결 확인 중...' && globalStats.lastUpdated !== '오프라인 대기' && Math.random() < 0.8) {
-                    if (this.name === 'Hermes') {
-                        // PM은 종합 건강 스코어 중계 및 대표실 채널 안녕 확인
-                        const healthDiags = [
-                            `현재 사옥 종합 건강성 지수(OHI)는 ${globalStats.officeHealthIndex}%! 매우 모범적입니다. 👑`,
-                            "디스코드 대표실 비상 알림 채널도 100% 안전 연동 중! 📡",
-                            `VIRTUAL_OFFICE 실시간 관제 정상 가동 (동기화: ${globalStats.lastUpdated}) ⏰`
-                        ];
-                        this.currentDiag = healthDiags[Math.floor(Math.random() * healthDiags.length)];
-                    } else if (this.name === 'Blinky') {
-                        // 감찰관은 기획/개발 태스크 진척도 및 징계 스택 중계
-                        const remaining = globalStats.totalTasks - globalStats.completedTasks;
-                        const blinkyDiags = [
-                            `현재 프로젝트 진행도: 총 ${globalStats.totalTasks}개 중 ${globalStats.completedTasks}개 완수! 🔍`,
-                            globalStats.devPenalized 
-                                ? "경고 3회 누적! Dev-Agent 삼진 징계(절대 팩트 모드)를 엄정 집행 중입니다. ⚖️" 
-                                : "Dev-Agent 경고 누적 스택: 0회! 사내 기강이 아주 잘 유지되고 있군요.",
-                            "가상 CTO 코드 50라인 초과 검사 및 AST 무단 에셋 도용 검사 완료."
-                        ];
-                        this.currentDiag = blinkyDiags[Math.floor(Math.random() * blinkyDiags.length)];
-                    } else if (this.name === 'Dev-Agent') {
-                        // 개발자는 자신의 작업 상황 및 각오 보고
-                        const remaining = globalStats.totalTasks - globalStats.completedTasks;
-                        const devDiags = [
-                            globalStats.devPenalized 
-                                ? "흑... 경고 3회 징계 중입니다. 팩트 코딩에 온도를 0.0으로 고정하고 자숙 중입니다. 😭" 
-                                : `대표님! 남은 ${remaining}개의 개발 태스크도 순식간에 무결점 코딩하겠습니다! 🤖`,
-                            "GUT Headless 1단계 QA 자동화 검증 합격률 100.0% 대기 중!",
-                            "ComfyUI + Flux.1 격리 가상환경 로컬 그래픽 렌더링 파이프라인 기동 완료! 🎨"
-                        ];
-                        this.currentDiag = devDiags[Math.floor(Math.random() * devDiags.length)];
-                    }
+                    const statusDiags = [
+                        `종합 건강성 지수(OHI): ${globalStats.officeHealthIndex}% 정상 가동 중 👑`,
+                        `프로젝트 진행도: 총 ${globalStats.totalTasks}개 중 ${globalStats.completedTasks}개 완수 완료 🔍`,
+                        `디스코드 대표실 실시간 비상 알림 채널 연동 완료 📡`,
+                        `가상 CTO 정적 코드 심사 및 AST 분석 모니터링 중 🛡️`,
+                        globalStats.devPenalized 
+                            ? "경고 발생: Dev-Agent 팩트 코딩 징계 절차 집행 중 ⚖️" 
+                            : "사내 기강 수준 매우 모범적 (경고 누적 0회) 🛡️"
+                    ];
+                    this.currentDiag = statusDiags[Math.floor(Math.random() * statusDiags.length)];
                 } else {
                     // Fail-Safe 무작위 아늑한 대사 선택
-                    this.currentDiag = OFFLINE_DIAGS[Math.floor(Math.random() * OFFLINE_DIAGS.length)];
+                    const offlineDiags = [
+                        "대표님, 오늘 하루도 정말 고생 많으셨습니다. ☕",
+                        "단색 레트로 모노크롬 순찰 모드 정상 가동 중입니다. 🟢",
+                        "True Black 픽셀 오프로 맥북 디스플레이를 아늑하게 보호하고 있습니다.",
+                        "새 맥북이 도착하면 1줄 시동어로 저를 즉시 깨워주십시오! 📡",
+                        "소회의실 난로가 참 아늑하네요. 체력 비축 중...",
+                        "항상 허용(Always Allow) 통과증 덕분에 깃허브 푸시도 프리패스!",
+                        "10 FPS 에코 모드로 전력과 수명을 극도로 세이브하고 있습니다."
+                    ];
+                    this.currentDiag = offlineDiags[Math.floor(Math.random() * offlineDiags.length)];
                 }
                 this.diagLife = 65; // 약 6.5초간 말풍선 유지
             }
@@ -321,40 +297,24 @@
                     }
                 }
 
-                // 🦉 Hermes PM 전용: 8비트 골드 왕관 렌더링 (단색 조화)
+                // 🦉 Hermes PM 전용: 8비트 왕관 렌더링 (단색 조화)
                 if (this.name === 'Hermes') {
                     ctx.fillStyle = this.color;
                     const crownMap = [
-                        [0,1,0,1,0,1,0],
-                        [1,1,1,1,1,1,1],
-                        [1,1,1,1,1,1,1]
+                        [0,1,0,1,0],
+                        [1,1,1,1,1],
+                        [1,1,1,1,1]
                     ];
-                    // 앞이나 뒤를 볼 때에만 왕관 렌더링
-                    if (this.direction === 'DOWN' || this.direction === 'UP') {
-                        const crownStartX = this.x - (pSize * 3.5);
-                        const crownStartY = startY - (pSize * 3);
+                    // LEFT와 RIGHT 각각 머리 윗부분 중앙에 렌더링
+                    const crownStartX = this.direction === 'LEFT' ? this.x - (pSize * 2) : this.x - (pSize * 3);
+                    const crownStartY = startY - (pSize * 3);
 
-                        for (let cr = 0; cr < crownMap.length; cr++) {
-                            for (let cc = 0; cc < crownMap[cr].length; cc++) {
-                                if (crownMap[cr][cc] === 1) {
-                                    ctx.fillRect(crownStartX + (cc * pSize), crownStartY + (cr * pSize), pSize, pSize);
-                                }
+                    for (let cr = 0; cr < crownMap.length; cr++) {
+                        for (let cc = 0; cc < crownMap[cr].length; cc++) {
+                            if (crownMap[cr][cc] === 1) {
+                                ctx.fillRect(crownStartX + (cc * pSize), crownStartY + (cr * pSize), pSize, pSize);
                             }
                         }
-                    }
-                }
-
-                // 🔍 Blinky 감찰관 전용: 8비트 돋보기 렌더링
-                if (this.name === 'Blinky') {
-                    ctx.fillStyle = this.color;
-                    if (this.direction === 'DOWN' || this.direction === 'RIGHT') {
-                        ctx.fillRect(this.x + (pSize * 4), this.y + (pSize * 4), pSize, pSize);
-                        ctx.fillRect(this.x + (pSize * 5), this.y + (pSize * 5), pSize, pSize);
-                        ctx.fillRect(this.x + (pSize * 6), this.y + (pSize * 6), pSize, pSize);
-                    } else if (this.direction === 'LEFT') {
-                        ctx.fillRect(this.x - (pSize * 5), this.y + (pSize * 4), pSize, pSize);
-                        ctx.fillRect(this.x - (pSize * 6), this.y + (pSize * 5), pSize, pSize);
-                        ctx.fillRect(this.x - (pSize * 7), this.y + (pSize * 6), pSize, pSize);
                     }
                 }
 
@@ -403,11 +363,9 @@
             }
         }
 
-        // 🦉 에이전트 인스턴스 3종 선언
+        // 🦉 단일 에이전트 선언 (수석 PM Hermes)
         const agents = [
-            new Agent('Hermes', COLORS.hermes, window.innerWidth * 0.2, window.innerHeight * 0.4),
-            new Agent('Blinky', COLORS.blinky, window.innerWidth * 0.5, window.innerHeight * 0.6),
-            new Agent('Dev-Agent', COLORS.devAgent, window.innerWidth * 0.8, window.innerHeight * 0.3)
+            new Agent('Hermes', COLORS.hermes, window.innerWidth * 0.5, window.innerHeight * 0.5)
         ];
 
         // 👥 에이전트 간 튕김 물리(Bounce) 연산
