@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import sys
@@ -31,6 +33,15 @@ app = FastAPI(
     description="FastAPI + SQLite Lightweight Dialogue Server with Blinky Context Compression Middleware",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# CORS middleware for local standalone HTML screensaver cross-origin fetch
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- PYDANTIC SCHEMAS ---
@@ -114,7 +125,16 @@ class MessageResponse(BaseModel):
 
 # --- API ENDPOINTS ---
 
-
+@app.get("/virtual-dorm")
+def get_virtual_dorm():
+    """
+    Serves the VIRTUAL_DORM HTML screensaver page.
+    """
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(base_dir, "workspace", "shared", "virtual_dorm.html")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Virtual Dorm screensaver file not found.")
+    return FileResponse(file_path)
 
 @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
 def create_task(task: TaskCreate):

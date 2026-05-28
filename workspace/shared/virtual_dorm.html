@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛌 [PROJECT VIRTUAL_DORM] 가상 사옥 에이전트 기숙사</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Dosis:wght@500;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+            font-family: 'Outfit', sans-serif;
+            cursor: none; /* 화면보호기 감성 극대화 */
+        }
+
+        #dormCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+        }
+
+        /* 스마트 슬립 알림 레이어 (완전 암흑 속 미세 인디케이터) */
+        #sleepIndicator {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.07);
+            font-size: 11px;
+            letter-spacing: 1px;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="dormCanvas"></canvas>
+    <div id="sleepIndicator">💤 VIRTUAL_DORM SLEEP_MODE ACTIVE</div>
+
+    <script>
+        const canvas = document.getElementById('dormCanvas');
+        const ctx = canvas.getContext('2d');
+        const sleepIndicator = document.getElementById('sleepIndicator');
+
+        // 모니터 해상도 물리 매핑 및 스케일 보존
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * window.devicePixelRatio;
+            canvas.height = window.innerHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 🌟 프리미엄 네온 도트 컬러 팔레트
+        const COLORS = {
+            hermes: '#FFD700',      // 골드 왕관
+            blinky: '#00E5FF',      // 네온 사이언
+            devAgent: '#39FF14',    // 네온 그린
+            warn: '#FF073A',        // 네온 레드 (징계용)
+            bubbleBg: 'rgba(15, 15, 20, 0.95)',
+            bubbleBorder: 'rgba(255, 255, 255, 0.15)',
+            bubbleText: '#E2E8F0',
+            sysStats: '#4A5568'
+        };
+
+        // 📡 API 상태 관제 변수
+        let globalStats = {
+            totalTasks: 0,
+            completedTasks: 0,
+            officeHealthIndex: 100,
+            devPenalized: false,
+            lastUpdated: '연결 확인 중...'
+        };
+
+        // 🕯️ 평화로운 기숙사 오프라인 대사 모음 (15종 Fail-Safe)
+        const OFFLINE_DIAGS = [
+            "대표님, 오늘 하루도 정말 고생 많으셨습니다. ☕",
+            "M5 Pro Max 화면 주사율과 픽셀 선명도가 예술이네요! ✨",
+            "Blinky 주임님, 오늘은 징계 줄 사람 없는 평화로운 밤이죠?",
+            "Hermes PM님, 오늘 사옥 건강성 지수가 아주 훌륭합니다. 👍",
+            "VRAM 캐시 자동 언로드 완료! 아주 쾌적하게 쉬는 중입니다.",
+            "따뜻한 기숙사 소파에 앉아 대표님을 관측하고 있습니다. 👀",
+            "True Black 픽셀 오프 덕분에 제 디스플레이가 곤히 쉬고 있네요.",
+            "Virtual_Studio 백그라운드 서버, 이상 무! 완벽 작동 중입니다.",
+            "Dev-Agent야, 어제 테트리스 린트 에러 고치느라 수고했다.",
+            "소회의실 난로가 참 아늑하네요. 타닥타닥 소리가 좋습니다.",
+            "대표실 비상 웹훅 라인이 안전하게 가동되고 있습니다. 📡",
+            "스마트 캔버스 10 FPS 에코 모드로 전력을 극도로 세이브하는 중!",
+            "내일도 멋진 실물 게임 1호기를 조각하기 위해 체력 비축 중...",
+            "새 맥북이 도착하면 1줄 시동어로 저를 즉시 깨워주십시오!",
+            "항상 허용(Always Allow) 통과증 덕분에 깃허브 푸시도 하이패스!"
+        ];
+
+        // 🦉 에이전트 클래스 정의
+        class Agent {
+            constructor(name, color, startX, startY) {
+                this.name = name;
+                this.color = color;
+                this.x = startX;
+                this.y = startY;
+                this.radius = 24;
+                this.vx = (Math.random() - 0.5) * 2; // 느긋하고 편안한 이동 속도
+                this.vy = (Math.random() - 0.5) * 2;
+                this.diagTimer = Math.random() * 50; // 대사 타이밍
+                this.currentDiag = "";
+                this.diagLife = 0;
+            }
+
+            update(width, height) {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 벽 충돌 탄성 반사
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx = -this.vx;
+                }
+                if (this.x + this.radius > width) {
+                    this.x = width - this.radius;
+                    this.vx = -this.vx;
+                }
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.vy = -this.vy;
+                }
+                if (this.y + this.radius > height) {
+                    this.y = height - this.radius;
+                    this.vy = -this.vy;
+                }
+
+                // 대사 주기 스케줄링
+                this.diagTimer++;
+                if (this.diagTimer > 120) { // 약 12초마다 대사 변경
+                    this.triggerDialogue();
+                    this.diagTimer = 0;
+                }
+
+                if (this.diagLife > 0) {
+                    this.diagLife--;
+                } else {
+                    this.currentDiag = "";
+                }
+            }
+
+            triggerDialogue() {
+                // 백엔드 연동 상태 분석 후 대사 결정
+                if (globalStats.lastUpdated !== '연결 확인 중...' && Math.random() < 0.6) {
+                    if (this.name === 'Hermes') {
+                        this.currentDiag = `종합 OHI 지수 ${globalStats.officeHealthIndex}% 유지 중! 평화롭습니다. 👑`;
+                    } else if (this.name === 'Blinky') {
+                        this.currentDiag = globalStats.devPenalized 
+                            ? "Dev-Agent 삼진 징계 중! 기강 확립 완료." 
+                            : "CTO 50라인 코드 규칙 정밀 순찰 중... 🔍";
+                    } else if (this.name === 'Dev-Agent') {
+                        this.currentDiag = globalStats.devPenalized 
+                            ? "Blinky 주임님 죄송합니다... 반성하며 대기 중 😭" 
+                            : "테스트 빌드 100% 정상 가동 확인! 이상 무! 🤖";
+                    }
+                } else {
+                    // Fail-Safe 무작위 아늑한 대사 선택
+                    this.currentDiag = OFFLINE_DIAGS[Math.floor(Math.random() * OFFLINE_DIAGS.length)];
+                }
+                this.diagLife = 60; // 6초간 말풍선 유지
+            }
+
+            draw() {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+
+                // 1. 에이전트 메인 도트 드로잉 (Canvas Vector Pixel Art)
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+
+                if (this.name === 'Hermes') {
+                    // PM 부엉이 도트 스타일
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 골드 왕관 씌우기
+                    ctx.fillStyle = COLORS.hermes;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - 10, this.y - 22);
+                    ctx.lineTo(this.x - 15, this.y - 32);
+                    ctx.lineTo(this.x - 5, this.y - 28);
+                    ctx.lineTo(this.x, this.y - 37);
+                    ctx.lineTo(this.x + 5, this.y - 28);
+                    ctx.lineTo(this.x + 15, this.y - 32);
+                    ctx.lineTo(this.x + 10, this.y - 22);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.name === 'Blinky') {
+                    // 감찰관 돋보기 형상
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius - 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 돋보기 손잡이 표현
+                    ctx.strokeStyle = COLORS.blinky;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 12, this.y + 12);
+                    ctx.lineTo(this.x + 28, this.y + 28);
+                    ctx.stroke();
+                } else if (this.name === 'Dev-Agent') {
+                    // 로봇 도트
+                    ctx.beginPath();
+                    ctx.rect(this.x - 18, this.y - 18, 36, 36);
+                    ctx.fill();
+                    // 안테나 표현
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y - 18);
+                    ctx.lineTo(this.x, this.y - 28);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y - 30, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 징계 중일 시 빨간색 반성 띠 렌더링
+                    if (globalStats.devPenalized) {
+                        ctx.fillStyle = COLORS.warn;
+                        ctx.shadowColor = COLORS.warn;
+                        ctx.fillRect(this.x - 18, this.y - 10, 36, 8);
+                    }
+                }
+
+                // 눈 그리기
+                ctx.fillStyle = '#000000';
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(this.x - 7, this.y - 2, 3, 0, Math.PI * 2);
+                ctx.arc(this.x + 7, this.y - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 2. 실시간 상태 말풍선 렌더링 (Vibrant Dark Glassmorphism)
+                if (this.currentDiag) {
+                    ctx.save();
+                    ctx.font = "13px 'Outfit', sans-serif";
+                    const textWidth = ctx.measureText(this.currentDiag).width;
+                    const padX = 14;
+                    const padY = 10;
+                    const bubbleW = textWidth + padX * 2;
+                    const bubbleH = 34;
+
+                    const bx = this.x - bubbleW / 2;
+                    const by = this.y - this.radius - bubbleH - 12;
+
+                    // 화면 밖 침범 예방 바인딩
+                    const safeBx = Math.max(10, Math.min(w - bubbleW - 10, bx));
+                    const safeBy = Math.max(10, by);
+
+                    // 말풍선 배경
+                    ctx.fillStyle = COLORS.bubbleBg;
+                    ctx.strokeStyle = COLORS.bubbleBorder;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect(safeBx, safeBy, bubbleW, bubbleH, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // 말풍선 꼬리표
+                    ctx.fillStyle = COLORS.bubbleBg;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - 6, safeBy + bubbleH);
+                    ctx.lineTo(this.x + 6, safeBy + bubbleH);
+                    ctx.lineTo(this.x, safeBy + bubbleH + 6);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // 텍스트 인쇄
+                    ctx.fillStyle = COLORS.bubbleText;
+                    ctx.fillText(this.currentDiag, safeBx + padX, safeBy + 21);
+                    ctx.restore();
+                }
+            }
+        }
+
+        // 🦉 에이전트 인스턴스 3종 선언
+        const agents = [
+            new Agent('Hermes', COLORS.hermes, window.innerWidth * 0.2, window.innerHeight * 0.4),
+            new Agent('Blinky', COLORS.blinky, window.innerWidth * 0.5, window.innerHeight * 0.6),
+            new Agent('Dev-Agent', COLORS.devAgent, window.innerWidth * 0.8, window.innerHeight * 0.3)
+        ];
+
+        // 👥 에이전트 간 튕김 물리(Bounce) 연산
+        function resolveCollision(a, b) {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = a.radius + b.radius;
+
+            if (dist < minDist) {
+                // 겹침 해결
+                const overlap = minDist - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                a.x -= nx * overlap * 0.5;
+                a.y -= ny * overlap * 0.5;
+                b.x += nx * overlap * 0.5;
+                b.y += ny * overlap * 0.5;
+
+                // 탄성 충돌 속도 교환
+                const kx = a.vx - b.vx;
+                const ky = a.vy - b.vy;
+                const p = nx * kx + ny * ky;
+
+                a.vx -= nx * p;
+                a.vy -= ny * p;
+                b.vx += nx * p;
+                b.vy += ny * p;
+            }
+        }
+
+        // 📡 실시간 백엔드 데이터 크로스 폴링 (CORS 대응)
+        async function fetchLiveStats() {
+            try {
+                // 1. 에이전트 및 태스크 통계 조회
+                const taskRes = await fetch('http://localhost:8000/api/tasks');
+                if (taskRes.ok) {
+                    const tasks = await taskRes.json();
+                    globalStats.totalTasks = tasks.length;
+                    globalStats.completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
+                }
+
+                // 2. 사내 종합 건강 지표 및 징계 여부 조회
+                const auditRes = await fetch('http://localhost:8000/api/audit/summary');
+                if (auditRes.ok) {
+                    const audit = await auditRes.json();
+                    globalStats.officeHealthIndex = Math.round(audit.office_health_index);
+                    globalStats.devPenalized = audit.raw_indicators.discipline_level < 100;
+                    globalStats.lastUpdated = new Date().toLocaleTimeString();
+                }
+            } catch (err) {
+                // API 서버 꺼져있을 시 자동 오프라인 페일세이프 유지
+                globalStats.lastUpdated = '오프라인 대기';
+            }
+        }
+        setInterval(fetchLiveStats, 30000); // 30초 주기 관제
+        fetchLiveStats(); // 최초 1회 즉시 스캔
+
+        // ⏰ 스마트 슬립 스케줄러 (심야 패널 완전 차단)
+        function isSleepTime() {
+            const hour = new Date().getHours();
+            return (hour >= 0 && hour < 8); // 00:00 ~ 07:59 슬립 기동
+        }
+
+        // 🎮 메인 프레임 루프 (10 FPS 에코 모드 - 전력 소모 극소화)
+        function drawFrame() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // 1. 화면 클리어 (칠흑 배경 유지로 OLED/Mini-LED 전원 절약)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+
+            if (isSleepTime()) {
+                // 💤 수면 시간: 캔버스를 완전히 비우고 픽셀 완전 휴면 상태 유입
+                sleepIndicator.style.opacity = '1';
+                setTimeout(drawFrame, 1000); // 프레임 연산 주기를 1초로 극단화
+                return;
+            }
+
+            sleepIndicator.style.opacity = '0';
+
+            // 2. 에이전트 상호 충돌 연산
+            for (let i = 0; i < agents.length; i++) {
+                for (let j = i + 1; j < agents.length; j++) {
+                    resolveCollision(agents[i], agents[j]);
+                }
+            }
+
+            // 3. 에이전트 업데이트 및 드로잉
+            agents.forEach(agent => {
+                agent.update(w, h);
+                agent.draw();
+            });
+
+            // 4. 우측 상단 실시간 사옥 기동 인디케이터 (초저전력 미세 렌더링)
+            ctx.save();
+            ctx.fillStyle = COLORS.sysStats;
+            ctx.font = "11px 'Outfit', sans-serif";
+            ctx.fillText(`📊 HEALTH: ${globalStats.officeHealthIndex}%  |  TASKS: ${globalStats.completedTasks}/${globalStats.totalTasks}  |  LIVE: ${globalStats.lastUpdated}`, 20, 30);
+            ctx.restore();
+
+            setTimeout(drawFrame, 100); // 정확하게 10 FPS (100ms 지연) 유지
+        }
+
+        // 기동 시동
+        drawFrame();
+    </script>
+</body>
+</html>
