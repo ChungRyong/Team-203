@@ -67,3 +67,8 @@
 - [ ] `Art-Agent` 턴을 가동해 `/api/art/generate` API로 ComfyUI를 찔러 고품질 UI/UX 시안 에셋 물리 렌더링 및 `metadata.json` 적재.
 - [ ] `Dev-Agent`가 앞선 명세와 `art/metadata.json`에 등록된 실물 리소스만 100% 임포트하여 작동 가능한 GDScript 소스코드 `dev/tetris.gd` 물리 코딩.
 - [ ] 가상 CTO(`Claude-Code`)의 정적 AST 및 에셋 정합성 감사, 그리고 GUT QA 자동 통과 확인 후 실물 1호기 원격 릴리스.
+
+---
+
+## 4. 🚨 대표님 핵심 지침 및 제약사항 (Rules & Constraints)
+* **[Git 컨펌 제약] Git 업로드(Push) 절대 통제:** Git 원격 저장소(`git push`)에 작업 내용을 업로드하는 것은 **대표님께서 최종 마음에 들어 하시고 명시적으로 승인(컨펌)하셨을 때**에만 진행합니다. 에이전트가 테스트 통과나 스냅샷 등의 이유로 사전에 승인받지 않은 `git push`를 자동 수행해서는 절대로 안 됩니다. (자율 백업 및 로컬 커밋은 허용하되, 원격 Push는 100% 대표님 컨펌 이후 수동으로 진행)
