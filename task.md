@@ -27,12 +27,12 @@
 ---
 
 ## 🤖 5. 2족보행 4방향 로봇 캐릭터 고도화 (Bipedal Robot Upgrade)
-- [ ] `virtual_dorm.html` 내 캐릭터 3종을 고유 레트로 단색(Monochrome) 컬러칩으로 매핑
+- [x] `virtual_dorm.html` 내 캐릭터 3종을 고유 레트로 단색(Monochrome) 컬러칩으로 매핑
   - Hermes: 클래식 어두운 녹색 인광 (`#00B33C`)
   - Blinky: 레트로 터미널 사이언 (`#00CCFF`)
   - Dev-Agent: 레트로 터미널 앰버 (`#FF9900`)
-- [ ] 4방향(DOWN, UP, LEFT, RIGHT) 2족보행 12x12 모노크롬 도트 매트릭스 설계 및 적용
-- [ ] 이동 속도 벡터(`vx`, `vy`) 기준 시선 방향 실시간 감지 로직 구현
-- [ ] 2프레임 아장아장 걷기(Feet Walk Animation) 2족보행 모션 정밀 보정
-- [ ] 통합 빌드, 브라우저 정상 렌더링 동작 확인 및 Git 커밋/푸시 완료
+- [x] 4방향(DOWN, UP, LEFT, RIGHT) 2족보행 12x12 모노크롬 도트 매트릭스 설계 및 적용
+- [x] 이동 속도 벡터(`vx`, `vy`) 기준 시선 방향 실시간 감지 로직 구현
+- [x] 2프레임 아장아장 걷기(Feet Walk Animation) 2족보행 모션 정밀 보정
+- [x] 통합 빌드, 브라우저 정상 렌더링 동작 확인 및 Git 커밋/푸시 완료
 
