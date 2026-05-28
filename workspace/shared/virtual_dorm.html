@@ -106,7 +106,7 @@
                 this.color = color;
                 this.x = startX;
                 this.y = startY;
-                this.radius = 32; // 물리 경계 반사용 크기 (16x22 크기 맞춤 고도화)
+                this.radius = 120; // 물리 경계 반사용 크기 (300*300 크기 스케일링 맞춤 고도화)
                 // 아장아장 걷는 속도에 최적화 (좌우 방향만 부여)
                 this.vx = (Math.random() > 0.5 ? 1 : -1) * 1.2; 
                 this.vy = 0; // 상하 속도는 0으로 고정
@@ -191,7 +191,7 @@
                 ctx.shadowColor = this.color;
                 ctx.fillStyle = this.color;
 
-                const pSize = 4; // 픽셀 1칸의 크기
+                const pSize = 15; // 픽셀 1칸의 크기 (대표님 요청: 약 300*300 크기 매핑)
                 const startX = this.x - (pSize * 8); // 16x22 그리드 중심 정렬
                 const startY = this.y - (pSize * 11);
 
