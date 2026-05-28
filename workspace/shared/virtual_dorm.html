@@ -157,31 +157,51 @@
             }
 
             triggerDialogue() {
-                // 백엔드 연동 상태 분석 후 대사 결정
-                if (globalStats.lastUpdated !== '연결 확인 중...' && Math.random() < 0.6) {
+                // 📡 대표님 명화 기획: 좌측 상단 고정 텍스트를 제거하고 캐릭터들이 돌아다니며 실시간 상태 브리핑!
+                if (globalStats.lastUpdated !== '연결 확인 중...' && globalStats.lastUpdated !== '오프라인 대기' && Math.random() < 0.8) {
                     if (this.name === 'Hermes') {
-                        this.currentDiag = `종합 OHI 지수 ${globalStats.officeHealthIndex}% 유지 중! 평화롭습니다. 👑`;
+                        // PM은 종합 건강 스코어 중계 및 대표실 채널 안녕 확인
+                        const healthDiags = [
+                            `현재 사옥 종합 건강성 지수(OHI)는 ${globalStats.officeHealthIndex}%! 매우 모범적입니다. 👑`,
+                            "디스코드 대표실 비상 알림 채널도 100% 안전 연동 중! 📡",
+                            `VIRTUAL_OFFICE 실시간 관제 정상 가동 (동기화: ${globalStats.lastUpdated}) ⏰`
+                        ];
+                        this.currentDiag = healthDiags[Math.floor(Math.random() * healthDiags.length)];
                     } else if (this.name === 'Blinky') {
-                        this.currentDiag = globalStats.devPenalized 
-                            ? "Dev-Agent 삼진 징계 중! 기강 확립 완료." 
-                            : "CTO 50라인 코드 규칙 정밀 순찰 중... 🔍";
+                        // 감찰관은 기획/개발 태스크 진척도 및 징계 스택 중계
+                        const remaining = globalStats.totalTasks - globalStats.completedTasks;
+                        const blinkyDiags = [
+                            `현재 프로젝트 진행도: 총 ${globalStats.totalTasks}개 중 ${globalStats.completedTasks}개 완수! 🔍`,
+                            globalStats.devPenalized 
+                                ? "경고 3회 누적! Dev-Agent 삼진 징계(절대 팩트 모드)를 엄정 집행 중입니다. ⚖️" 
+                                : "Dev-Agent 경고 누적 스택: 0회! 사내 기강이 아주 잘 유지되고 있군요.",
+                            "가상 CTO 코드 50라인 초과 검사 및 AST 무단 에셋 도용 검사 완료."
+                        ];
+                        this.currentDiag = blinkyDiags[Math.floor(Math.random() * blinkyDiags.length)];
                     } else if (this.name === 'Dev-Agent') {
-                        this.currentDiag = globalStats.devPenalized 
-                            ? "Blinky 주임님 죄송합니다... 반성하며 대기 중 😭" 
-                            : "테스트 빌드 100% 정상 가동 확인! 이상 무! 🤖";
+                        // 개발자는 자신의 작업 상황 및 각오 보고
+                        const remaining = globalStats.totalTasks - globalStats.completedTasks;
+                        const devDiags = [
+                            globalStats.devPenalized 
+                                ? "흑... 경고 3회 징계 중입니다. 팩트 코딩에 온도를 0.0으로 고정하고 자숙 중입니다. 😭" 
+                                : `대표님! 남은 ${remaining}개의 개발 태스크도 순식간에 무결점 코딩하겠습니다! 🤖`,
+                            "GUT Headless 1단계 QA 자동화 검증 합격률 100.0% 대기 중!",
+                            "ComfyUI + Flux.1 격리 가상환경 로컬 그래픽 렌더링 파이프라인 기동 완료! 🎨"
+                        ];
+                        this.currentDiag = devDiags[Math.floor(Math.random() * devDiags.length)];
                     }
                 } else {
                     // Fail-Safe 무작위 아늑한 대사 선택
                     this.currentDiag = OFFLINE_DIAGS[Math.floor(Math.random() * OFFLINE_DIAGS.length)];
                 }
-                this.diagLife = 60; // 6초간 말풍선 유지
+                this.diagLife = 65; // 약 6.5초간 말풍선 유지
             }
 
             draw() {
                 const w = window.innerWidth;
                 const h = window.innerHeight;
 
-                // 🌟 대표님 극찬: 8비트 패미컴 감성 픽셀 그리드 드로잉 (Pixel Grid Drawing)
+                // 🌟 8비트 패미컴 감성 픽셀 그리드 드로잉 (Pixel Grid Drawing)
                 ctx.save();
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = this.color;
@@ -192,7 +212,7 @@
                 const startY = this.y - (pSize * 6);
 
                 // 2D 픽셀 맵 매트릭스 (12x12)
-                // 0: 투명, 1: 캐릭터 색상, 2: 눈(흰자), 3: 눈동자(블랙), 4: 왕관/액세서리
+                // 0: 투명, 1: 캐릭터 색상, 2: 눈(흰자), 3: 눈동자(블랙)
                 let pixelMap = [
                     [0,0,0,0,1,1,1,1,0,0,0,0],
                     [0,0,0,1,1,1,1,1,1,0,0,0],
@@ -207,7 +227,7 @@
                     [0,1,1,1,1,1,1,1,1,1,1,0]
                 ];
 
-                // 👣 대표님 맞춤: 아장아장 발 모양 2프레임 애니메이션 픽셀 매핑
+                // 👣 아장아장 발 모양 2프레임 애니메이션 픽셀 매핑
                 let feetRow = [];
                 if (this.walkFrame === 0) {
                     // 발 모양 A: 1 0 1 1 0 1 1 0 1 1 0 1 (오므린 발걸음)
@@ -230,7 +250,6 @@
                         } else if (cell === 2) {
                             ctx.fillStyle = '#FFFFFF'; // 눈 흰자
                         } else if (cell === 3) {
-                            // 이동 방향(vx)을 째려보는 지능형 눈동자
                             ctx.fillStyle = '#000000';
                         }
 
@@ -247,7 +266,6 @@
                 // 🦉 Hermes PM 전용: 8비트 골드 왕관 렌더링
                 if (this.name === 'Hermes') {
                     ctx.fillStyle = COLORS.hermes;
-                    // 왕관 모양 픽셀 찍기
                     const crownMap = [
                         [0,1,0,1,0,1,0],
                         [1,1,1,1,1,1,1],
@@ -268,7 +286,6 @@
                 // 🔍 Blinky 감찰관 전용: 8비트 네온 돋보기 렌더링
                 if (this.name === 'Blinky') {
                     ctx.fillStyle = COLORS.blinky;
-                    // 돋보기 모양 픽셀 찍기 (대각선 핸들)
                     ctx.fillRect(this.x + (pSize * 4), this.y + (pSize * 4), pSize, pSize);
                     ctx.fillRect(this.x + (pSize * 5), this.y + (pSize * 5), pSize, pSize);
                     ctx.fillRect(this.x + (pSize * 6), this.y + (pSize * 6), pSize, pSize);
@@ -419,13 +436,6 @@
                 agent.update(w, h);
                 agent.draw();
             });
-
-            // 4. 우측 상단 실시간 사옥 기동 인디케이터 (초저전력 미세 렌더링)
-            ctx.save();
-            ctx.fillStyle = COLORS.sysStats;
-            ctx.font = "11px 'Outfit', sans-serif";
-            ctx.fillText(`📊 HEALTH: ${globalStats.officeHealthIndex}%  |  TASKS: ${globalStats.completedTasks}/${globalStats.totalTasks}  |  LIVE: ${globalStats.lastUpdated}`, 20, 30);
-            ctx.restore();
 
             setTimeout(drawFrame, 100); // 정확하게 10 FPS (100ms 지연) 유지
         }
