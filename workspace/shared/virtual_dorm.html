@@ -68,7 +68,7 @@
             devAgent: '#39FF14',    // 네온 그린
             warn: '#FF073A',        // 네온 레드 (징계용)
             bubbleBg: 'rgba(15, 15, 20, 0.95)',
-            bubbleBorder: 'rgba(255, 255, 255, 0.15)',
+            bubbleBorder: 'rgba(255, 255, 255, 0.12)',
             bubbleText: '#E2E8F0',
             sysStats: '#4A5568'
         };
@@ -85,7 +85,7 @@
         // 🕯️ 평화로운 기숙사 오프라인 대사 모음 (15종 Fail-Safe)
         const OFFLINE_DIAGS = [
             "대표님, 오늘 하루도 정말 고생 많으셨습니다. ☕",
-            "M5 Pro Max 화면 주사율과 픽셀 선명도가 예술이네요! ✨",
+            "아장아장 걷는 제 8비트 발가락 어때요? 너무 귀엽죠! 👣",
             "Blinky 주임님, 오늘은 징계 줄 사람 없는 평화로운 밤이죠?",
             "Hermes PM님, 오늘 사옥 건강성 지수가 아주 훌륭합니다. 👍",
             "VRAM 캐시 자동 언로드 완료! 아주 쾌적하게 쉬는 중입니다.",
@@ -108,12 +108,13 @@
                 this.color = color;
                 this.x = startX;
                 this.y = startY;
-                this.radius = 24;
-                this.vx = (Math.random() - 0.5) * 2; // 느긋하고 편안한 이동 속도
-                this.vy = (Math.random() - 0.5) * 2;
+                this.radius = 24; // 물리 경계 반사용 크기
+                this.vx = (Math.random() - 0.5) * 1.5; // 아장아장 걷는 속도에 최적화
+                this.vy = (Math.random() - 0.5) * 1.5;
                 this.diagTimer = Math.random() * 50; // 대사 타이밍
                 this.currentDiag = "";
                 this.diagLife = 0;
+                this.walkFrame = 0; // 걷기 애니메이션 프레임 토글러
             }
 
             update(width, height) {
@@ -137,6 +138,9 @@
                     this.y = height - this.radius;
                     this.vy = -this.vy;
                 }
+
+                // 걷는 발 모양 애니메이션 프레임 카운트 (10 FPS 에코 루프 연동)
+                this.walkFrame = (this.walkFrame + 1) % 2;
 
                 // 대사 주기 스케줄링
                 this.diagTimer++;
@@ -177,75 +181,102 @@
                 const w = window.innerWidth;
                 const h = window.innerHeight;
 
-                // 1. 에이전트 메인 도트 드로잉 (Canvas Vector Pixel Art)
+                // 🌟 대표님 극찬: 8비트 패미컴 감성 픽셀 그리드 드로잉 (Pixel Grid Drawing)
                 ctx.save();
-                ctx.shadowBlur = 15;
+                ctx.shadowBlur = 10;
                 ctx.shadowColor = this.color;
                 ctx.fillStyle = this.color;
 
-                if (this.name === 'Hermes') {
-                    // PM 부엉이 도트 스타일
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    // 골드 왕관 씌우기
-                    ctx.fillStyle = COLORS.hermes;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x - 10, this.y - 22);
-                    ctx.lineTo(this.x - 15, this.y - 32);
-                    ctx.lineTo(this.x - 5, this.y - 28);
-                    ctx.lineTo(this.x, this.y - 37);
-                    ctx.lineTo(this.x + 5, this.y - 28);
-                    ctx.lineTo(this.x + 15, this.y - 32);
-                    ctx.lineTo(this.x + 10, this.y - 22);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (this.name === 'Blinky') {
-                    // 감찰관 돋보기 형상
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius - 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    // 돋보기 손잡이 표현
-                    ctx.strokeStyle = COLORS.blinky;
-                    ctx.lineWidth = 4;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x + 12, this.y + 12);
-                    ctx.lineTo(this.x + 28, this.y + 28);
-                    ctx.stroke();
-                } else if (this.name === 'Dev-Agent') {
-                    // 로봇 도트
-                    ctx.beginPath();
-                    ctx.rect(this.x - 18, this.y - 18, 36, 36);
-                    ctx.fill();
-                    // 안테나 표현
-                    ctx.strokeStyle = this.color;
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y - 18);
-                    ctx.lineTo(this.x, this.y - 28);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y - 30, 3, 0, Math.PI * 2);
-                    ctx.fill();
+                const pSize = 4; // 픽셀 1칸의 크기
+                const startX = this.x - (pSize * 6); // 12x12 그리드 중심 정렬
+                const startY = this.y - (pSize * 6);
 
-                    // 징계 중일 시 빨간색 반성 띠 렌더링
-                    if (globalStats.devPenalized) {
-                        ctx.fillStyle = COLORS.warn;
-                        ctx.shadowColor = COLORS.warn;
-                        ctx.fillRect(this.x - 18, this.y - 10, 36, 8);
+                // 2D 픽셀 맵 매트릭스 (12x12)
+                // 0: 투명, 1: 캐릭터 색상, 2: 눈(흰자), 3: 눈동자(블랙), 4: 왕관/액세서리
+                let pixelMap = [
+                    [0,0,0,0,1,1,1,1,0,0,0,0],
+                    [0,0,0,1,1,1,1,1,1,0,0,0],
+                    [0,0,1,1,1,1,1,1,1,1,0,0],
+                    [0,1,1,1,1,1,1,1,1,1,1,0],
+                    [0,1,1,2,2,1,1,2,2,1,1,0], // 눈 위치
+                    [1,1,2,3,3,2,2,3,3,2,1,1], // 눈동자 위치
+                    [1,1,1,2,2,1,1,2,2,1,1,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1],
+                    [0,1,1,1,1,1,1,1,1,1,1,0]
+                ];
+
+                // 👣 대표님 맞춤: 아장아장 발 모양 2프레임 애니메이션 픽셀 매핑
+                let feetRow = [];
+                if (this.walkFrame === 0) {
+                    // 발 모양 A: 1 0 1 1 0 1 1 0 1 1 0 1 (오므린 발걸음)
+                    feetRow = [0,1,0,1,1,0,0,1,1,0,1,0];
+                } else {
+                    // 발 모양 B: 0 1 0 1 0 1 1 0 1 0 1 0 (벌린 발걸음)
+                    feetRow = [1,0,1,0,0,1,1,0,0,1,0,1];
+                }
+                pixelMap.push(feetRow);
+
+                // 🎨 12x12 그리드 그리기 루프
+                for (let r = 0; r < pixelMap.length; r++) {
+                    for (let c = 0; c < pixelMap[r].length; c++) {
+                        const cell = pixelMap[r][c];
+                        if (cell === 0) continue; // 투명은 스킵 (True Black 보존)
+
+                        // 픽셀 종류별 네온 컬러 매핑
+                        if (cell === 1) {
+                            ctx.fillStyle = this.color;
+                        } else if (cell === 2) {
+                            ctx.fillStyle = '#FFFFFF'; // 눈 흰자
+                        } else if (cell === 3) {
+                            // 이동 방향(vx)을 째려보는 지능형 눈동자
+                            ctx.fillStyle = '#000000';
+                        }
+
+                        // Dev-Agent 징계 시 빨간색 반성 이마 띠 렌더링
+                        if (this.name === 'Dev-Agent' && globalStats.devPenalized && r === 3 && c >= 2 && c <= 9) {
+                            ctx.fillStyle = COLORS.warn;
+                        }
+
+                        // 픽셀 드로잉 실행
+                        ctx.fillRect(startX + (c * pSize), startY + (r * pSize), pSize, pSize);
                     }
                 }
 
-                // 눈 그리기
-                ctx.fillStyle = '#000000';
-                ctx.shadowBlur = 0;
-                ctx.beginPath();
-                ctx.arc(this.x - 7, this.y - 2, 3, 0, Math.PI * 2);
-                ctx.arc(this.x + 7, this.y - 2, 3, 0, Math.PI * 2);
-                ctx.fill();
+                // 🦉 Hermes PM 전용: 8비트 골드 왕관 렌더링
+                if (this.name === 'Hermes') {
+                    ctx.fillStyle = COLORS.hermes;
+                    // 왕관 모양 픽셀 찍기
+                    const crownMap = [
+                        [0,1,0,1,0,1,0],
+                        [1,1,1,1,1,1,1],
+                        [1,1,1,1,1,1,1]
+                    ];
+                    const crownStartX = this.x - (pSize * 3.5);
+                    const crownStartY = startY - (pSize * 3);
+
+                    for (let cr = 0; cr < crownMap.length; cr++) {
+                        for (let cc = 0; cc < crownMap[cr].length; cc++) {
+                            if (crownMap[cr][cc] === 1) {
+                                ctx.fillRect(crownStartX + (cc * pSize), crownStartY + (cr * pSize), pSize, pSize);
+                            }
+                        }
+                    }
+                }
+
+                // 🔍 Blinky 감찰관 전용: 8비트 네온 돋보기 렌더링
+                if (this.name === 'Blinky') {
+                    ctx.fillStyle = COLORS.blinky;
+                    // 돋보기 모양 픽셀 찍기 (대각선 핸들)
+                    ctx.fillRect(this.x + (pSize * 4), this.y + (pSize * 4), pSize, pSize);
+                    ctx.fillRect(this.x + (pSize * 5), this.y + (pSize * 5), pSize, pSize);
+                    ctx.fillRect(this.x + (pSize * 6), this.y + (pSize * 6), pSize, pSize);
+                }
+
                 ctx.restore();
 
-                // 2. 실시간 상태 말풍선 렌더링 (Vibrant Dark Glassmorphism)
+                // 💬 실시간 상태 말풍선 렌더링 (Vibrant Dark Glassmorphism)
                 if (this.currentDiag) {
                     ctx.save();
                     ctx.font = "13px 'Outfit', sans-serif";
