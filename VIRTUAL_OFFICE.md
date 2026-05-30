@@ -65,3 +65,7 @@
 ### 제5조 [에이전트 자율 스킬 실행 및 자산화 규칙] (Agent Skill Execution & Assets Rule)
 - 에이전트들은 업무 효율 극대화 및 지식의 자산화를 위해, 2회 이상 중복 수행되거나 자동화가 가능한 워크플로우(이중 워크스페이스 동기화 등)를 발견하면 즉시 프로젝트 최상단 디렉토리인 `.skills/` 하위에 스킬 명세(`SKILL.md`)와 결정론적 자동화 스크립트(`scripts/`)를 포함하는 **정식 Skill**로 자산화 패키징을 수행해야 함.
 - 가상 사옥의 모든 에이전트(`Concept-Agent`, `Art-Agent`, `Dev-Agent`, `PM Hermes`, `Blinky` 등)는 정형화된 반복 작업 수행 시 프로젝트 루트 `.skills/` 디렉토리를 자율 스캔하여 관련 스킬이 존재하는지 판단하고, 존재할 경우 `python3` 등 결정론적 쉘 방식으로 스크립트를 직접 기동하여 스킬을 수행해야 함.
+
+### 제6조 [Superpowers 에이전틱 스킬 프레임워크 수용] (Superpowers Framework Integration Rule)
+- 가상 사옥의 에이전트 편대는 소프트웨어 생명주기 관리 및 명세 무결성 극대화를 위해, `obra/superpowers` 프레임워크의 Socratic Brainstorming, Git Worktree 격리 개발, Micro-Task Planning, 2단계 코드 리뷰(Spec & Quality) 및 테스트 선행 TDD 워크플로우를 가상 사옥의 공식 확장 스킬셋으로 채택함.
+- 플랫폼 인프라는 이들 스킬을 오케스트레이터 및 백엔드 플러그인 형태로 로드하여 에이전트들의 시스템 프롬프트(Context) 및 실행 환경에 주입하며, 상주 에이전트들은 게임 실무 개발 시 이 통합 브리지를 활용하여 무결한 개발 산출물을 보장하여야 함.
