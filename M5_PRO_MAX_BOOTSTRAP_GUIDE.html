@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💻 M5 Pro Max 대표님 전용 초간편 사옥 시동 가이드</title>
+    <!-- Google Fonts: Outfit (Header) & JetBrains Mono (Code/Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05070a;
+            --container-bg: #0b0f17;
+            --primary-color: #00ff66;
+            --primary-glow: rgba(0, 255, 102, 0.2);
+            --border-color: #1a2436;
+            --text-color: #e2e8f0;
+            --text-muted: #8892b0;
+            --code-bg: #030508;
+            --accent-color: #00e5ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 255, 102, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 30px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.3rem;
+            color: #ffffff;
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .subtitle {
+            color: var(--primary-color);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+            text-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            color: #ffffff;
+            margin: 40px 0 20px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: '⚡';
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin: 30px 0 15px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        p {
+            margin-bottom: 20px;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        ul, ol {
+            margin-bottom: 25px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 12px;
+            color: var(--text-color);
+        }
+
+        /* Callout Box Style */
+        .callout {
+            background: rgba(0, 255, 102, 0.02);
+            border-left: 4px solid var(--primary-color);
+            padding: 20px 25px;
+            border-radius: 0 12px 12px 0;
+            margin: 30px 0;
+            box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.01);
+        }
+
+        .callout p {
+            margin-bottom: 0;
+            color: var(--text-color);
+        }
+
+        .callout-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            font-size: 1.05rem;
+        }
+
+        .callout-title::before {
+            content: '🎁';
+            margin-right: 8px;
+        }
+
+        /* Code Block Wrapper with Click-to-Copy */
+        .code-container {
+            position: relative;
+            margin: 20px 0 30px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #080d14;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .copy-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--primary-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background-color: var(--primary-color);
+            color: #000000;
+            box-shadow: 0 0 10px var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            padding: 20px;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            color: #a6accd;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .bash-comment {
+            color: var(--text-muted);
+        }
+
+        /* Simple Highlight elements */
+        .highlight {
+            background-color: rgba(0, 255, 102, 0.1);
+            color: var(--primary-color);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            margin-top: 60px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 30px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Mermaid flow simulation */
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 30px 0;
+            gap: 15px;
+        }
+
+        .flow-node {
+            background: #0f1522;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 24px;
+            text-align: center;
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: border-color 0.3s;
+        }
+
+        .flow-node:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0,255,102,0.1);
+        }
+
+        .flow-arrow {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            text-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        /* Smooth hover transition on container h2 */
+        h2:hover {
+            color: var(--primary-color);
+            text-shadow: 0 0 10px var(--primary-glow);
+            transition: all 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="subtitle">TEAM-203 VIRTUAL OFFICE</div>
+        <h1>💻 M5 Pro Max 대표님 전용 초간편 사옥 시동 가이드</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem; max-width: 600px; margin: 0 auto;">
+            본 문서는 대표님 박청룡님의 새로운 최고 성능 장비인 <strong>MacBook Pro M5 Pro Max</strong>가 도착했을 때, 대표님께서는 단 1줄의 명령어로 PM 에이전트를 깨우시고, 나머지 복잡한 인프라 설치 및 가동은 PM에게 100% 위임하여 자율 구동하기 위한 극단적 미니멀리즘 시동 런북입니다.
+        </p>
+    </header>
+
+    <div class="callout">
+        <div class="callout-title">🎁 [사전 준비: 디스코드 및 AI 인프라 인증 정보 확보 (1분 컷)]</div>
+        <p>수석 PM <code>Hermes</code>가 대표님의 개인 비서로서 작동하고, 사내 건강 지표가 대표실 디스코드 채널로 다이렉트 직송되려면 아래 딱 2가지 고유 보안 정보가 필요합니다.</p>
+        <ul style="margin: 15px 0 10px 20px;">
+            <li><strong>비상 감사 보고용 웹훅 URL (Discord Webhook URL):</strong> 대표실 디스코드 서버의 알림을 받으실 채널의 [채널 편집(톱니바퀴)] ➡️ [연동] ➡️ [웹훅 만들기]를 눌러 생성된 웹훅 URL을 복사해 둡니다.</li>
+            <li><strong>ComfyUI Flux.1 다운로드용 허깅페이스 토큰 (HuggingFace Token):</strong> black-forest-labs의 FLUX.1-dev 라이선스 동의 후 생성한 개인 Access Token을 복사해 둡니다.</li>
+        </ul>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">*(이 두 값은 절대 Git에 노출되거나 평문 파일로 저장되지 않으며, 아래 초기 5단계를 통해 대표님의 macOS 키체인에 하드웨어 암호화로 안전하게 격리 저장되어 에이전트가 자율 조회합니다.)*</p>
+    </div>
+
+    <h2>👔 [대표님 박청룡님이 하실 유일한 초기 5단계]</h2>
+    <p>새로 수령하신 M5 Pro Max에서 AI 에이전트의 완전 자율 비대화형 구동(보안 인증, 백그라운드 자동 깃 푸시 등)을 영구적으로 확보하기 위해, 대표님께서는 최초 1회 아래의 <strong>초간단 5단계</strong>만 집행해 주시면 모든 준비가 완결됩니다.</p>
+
+    <h3>1단계: GitHub로부터 사옥 프로젝트 클론 및 디렉토리 진입 (최초 1회 필수)</h3>
+    <p>터미널(Terminal) 앱을 열고 아래 명령어를 순서대로 실행하여, 보조 워크스페이스 전용 폴더를 생성하고 깃허브로부터 가상 사옥 프로젝트를 안전하게 클론하여 루트 경로로 진입해 주십시오:</p>
+    
+    <div class="code-container">
+        <div class="code-header">
+            <span>Terminal - Shell Command</span>
+            <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+        </div>
+        <pre><code><span class="bash-comment"># ① 보조 워크스페이스 전용 디렉토리 생성 및 이동</span>
+mkdir -p ~/Documents/workspace && cd ~/Documents/workspace
+
+<span class="bash-comment"># ② 깃허브 저장소로부터 Team-203 사옥 프로젝트 격리 클론</span>
+git clone https://github.com/ChungRyong/Team-203.git
+
+<span class="bash-comment"># ③ 프로젝트 루트 디렉토리 진입</span>
+cd Team-203</code></pre>
+    </div>
+
+    <h3>2단계: macOS 키체인에 보안 인증 자산 등록 (최초 1회 필수)</h3>
+    <p>터미널에 다음 복사해 둔 2개의 보안 값을 따옴표 안에 넣고 실행해 주십시오. 이 한 줄로 대표님의 보안 정보가 키체인에 안전하게 하드웨어 암호화 보관됩니다.</p>
+
+    <div class="code-container">
+        <div class="code-header">
+            <span>Terminal - Keychain Setup</span>
+            <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+        </div>
+        <pre><code><span class="bash-comment"># ① 디스코드 비상 웹훅 URL 등록 (따옴표 내 주소 입력)</span>
+security add-generic-password -a "Team203" -s "Discord_Webhook_URL" -w "실제_디스코드_웹훅_주소"
+
+<span class="bash-comment"># ② 허깅페이스 API 토큰 등록 (따옴표 내 토큰 입력)</span>
+security add-generic-password -a "Team203" -s "HF_TOKEN" -w "실제_허깅페이스_토큰"</code></pre>
+    </div>
+
+    <h3>3단계: Ollama 백그라운드 엔진 가동 및 PM 코어 브레인 모델 사전 다운로드 (최초 1회 필수)</h3>
+    <p>PM 에이전트(<code>Hermes</code>)가 정상적으로 깨어나고 작동하려면, 에이전트 런타임 셋업 전에 로컬 추론 엔진인 Ollama가 켜져 있어야 하며 PM의 브레인 역할을 수행할 모델이 로컬에 받아져 있어야 합니다:</p>
+
+    <div class="code-container">
+        <div class="code-header">
+            <span>Terminal - Ollama Model Seeding</span>
+            <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+        </div>
+        <pre><code><span class="bash-comment"># ① Ollama 백그라운드 엔진 가동 (Ollama 공식 앱 실행)</span>
+open -a Ollama
+
+<span class="bash-comment"># ② PM Hermes가 깨어날 때 연결할 핵심 추론 모델 사전 다운로드</span>
+ollama pull gemma4:31b-mlx || ollama pull gemma2:27b</code></pre>
+    </div>
+
+    <h3>4단계: 1줄 시동 명령어로 PM 깨우기</h3>
+    <p>프로젝트 루트 디렉토리(<span class="highlight">~/Documents/workspace/Team-203</span>)에서 다음 <strong>단 1줄의 마스터 커맨드</strong>를 실행해 주십시오.</p>
+
+    <div class="code-container">
+        <div class="code-header">
+            <span>Terminal - Hermes Bootstrapper</span>
+            <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+        </div>
+        <pre><code>curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash && hermes setup</code></pre>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+        *(이 명령어는 Nous Research의 최첨단 <strong>Hermes Agent</strong> 구동 엔진을 대표님의 맥북에 최초 영구 적재하고 PM Hermes를 영구 비서로 깨우는 초기화 단계입니다. 이미 3단계에서 브레인 모델(<code>gemma4/gemma2</code>)이 완비되어 있으므로, 셋업 연동이 한 치의 오류도 없이 완벽하게 동작합니다. 기동 시 <code>bootstrap.py</code> 내의 <strong>Keychain Security Resolver</strong>가 위의 키체인 보안 자산을 원터치로 추출하여 로컬 <code>.env</code>를 자율적으로 생성/병합합니다.)*
+    </p>
+
+    <h3>5단계: macOS 키체인 접근 제어 항상 허용 세팅 (최초 1회 필수)</h3>
+    <p>백그라운드 샌드박스의 AI 에이전트들이 대표님의 수동 인증 개입 없이 자율적으로 코드를 깃허브 원격지에 안전하게 커밋/푸시할 수 있도록 영구 프리패스 출입증을 발급해 주는 과정입니다.</p>
+    <ol style="margin-left: 20px;">
+        <li>Spotlight(Cmd + Space)를 눌러 <strong>'키체인 접근(Keychain Access)'</strong> 앱을 실행합니다.</li>
+        <li>우측 상단 검색창에 <span class="highlight">github.com</span>을 검색하고, 종류가 <strong>'인터넷 비밀번호'</strong>인 항목을 찾아 <strong>더블 클릭</strong>합니다.</li>
+        <li>팝업 창 상단의 <strong>[접근 제어 (Access Control)]</strong> 탭으로 이동합니다.</li>
+        <li><strong>'이 항목을 사용하여 모든 응용 프로그램의 접근 허용 (Allow all applications to access this item)'</strong> 라디오 버튼을 선택합니다.</li>
+        <li>우측 하단의 <strong>[변경사항 저장]</strong>을 누르고 맥북 암호를 입력해 승인하면 모든 인프라 락이 영구 해제됩니다.</li>
+    </ol>
+
+    <h2>🤖 [2단계 이후: PM 에이전트에게 위임하기]</h2>
+    <p>위 5단계 초기 셋업이 성공하여 디스코드 DM 또는 터미널을 통해 PM <code>Hermes</code>가 정상 연결되면, 대표님께서는 편안하게 의자에 기대어 디스코드 DM으로 <strong>수석 PM에게 다음 한 줄의 마스터 명령만 하달</strong>해 주시면 됩니다.</p>
+    <div class="callout" style="border-left-color: var(--accent-color); background: rgba(0, 229, 255, 0.01);">
+        <div class="callout-title" style="color: var(--accent-color); font-family: 'Outfit';">💬 대표님 지시 (Discord DM)</div>
+        <p style="font-style: italic; color: #ffffff;">
+            "Hermes, M5 Pro Max 로컬 장비에 Ollama 설치, qwen3.6:35b-mlx 및 gemma4:31b-mlx 최적화 모델들 풀링, ComfyUI 그래픽 엔진 셋업, 백엔드 SQLite 데이터베이스 시딩 및 오케스트레이터 최초 가동까지 전체 사옥 인프라를 자율 프로비저닝(셋업)해라."
+        </p>
+    </div>
+
+    <h2>📊 [PM Hermes의 자율 집행 프로세스 (무인화 진행)]</h2>
+    <p>대표님의 마스터 지시를 수령한 PM <code>Hermes</code>는 쉘에서 자율 인프라 가이드를 스스로 독파하여 M5 Pro Max 터미널을 직접 조작해 다음 업무를 자율 순차 처리합니다.</p>
+
+    <div class="flowchart">
+        <div class="flow-node"><strong>1. macOS 기초 환경 진단</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">M5 Pro Max 하드웨어 스펙 및 Homebrew, Python 3.13 자율 진단/설치</span></div>
+        <div class="flow-arrow">⬇️</div>
+        <div class="flow-node"><strong>2. Ollama 설치 및 MLX 정예 모델 풀링</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">gemma4:31b-mlx 및 qwen3.6:35b-mlx 모델 자율 로드 및 태그 무결성 검증</span></div>
+        <div class="flow-arrow">⬇️</div>
+        <div class="flow-node"><strong>3. ComfyUI 설치 및 Flux.1 가중치 배치</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">ComfyUI 격리 가상환경 구축 및 HF_TOKEN 인증을 통한 Flux.1 FP8 무인 다운로드</span></div>
+        <div class="flow-arrow">⬇️</div>
+        <div class="flow-node"><strong>4. Team-203 백엔드 venv 구축 및 DB 시딩</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">hermes_soul.db 감사 테이블 신설, Blinky 경고 적립 초기화 및 샌드박스 폴더 세팅</span></div>
+        <div class="flow-arrow">⬇️</div>
+        <div class="flow-node"><strong>5. Uvicorn 기동 및 디스코드 청색 완료 보고</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">FastAPI API 서버 기동 후 대표실 디스코드 채널로 실시간 OHI 지표 취합 임베드 보고</span></div>
+    </div>
+
+    <footer>
+        🛡️ TEAM-203 VIRTUAL OFFICE INFRASTRUCTURE ARCHITECT &bull; PLATFORM BUILDER ANTIGRAVITY
+    </footer>
+</div>
+
+<script>
+    function copyCode(btn) {
+        const pre = btn.closest('.code-container').querySelector('pre');
+        
+        // Temporarily extract code content without HTML tag representation
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = pre.innerText;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+
+        // Visual feedback
+        const originalText = btn.innerText;
+        btn.innerText = 'COPIED!';
+        btn.style.borderColor = '#00ff66';
+        btn.style.boxShadow = '0 0 12px rgba(0, 255, 102, 0.4)';
+        btn.style.backgroundColor = '#00ff66';
+        btn.style.color = '#000000';
+
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.borderColor = '';
+            btn.style.boxShadow = '';
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+        }, 1500);
+    }
+</script>
+</body>
+</html>
