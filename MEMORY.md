@@ -24,27 +24,31 @@
 * **통합 설계 보고서 신설 작성 및 규정 명문화:**
   - [superpowers_integration_plan.md](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/superpowers_integration_plan.md) 기술 아티팩트를 신설 작성하여 가상 사옥의 `.skills/` 저장소 체계와 `superpowers` 스킬 포맷의 100% 대칭성을 입증하고 R&R Lock을 절대 준수하는 백엔드 플러그인(FastAPI) 및 오케스트레이터 Context 주입 브리지 설계를 수립했습니다.
   - `VIRTUAL_OFFICE.md`에 **[제6조 Superpowers 에이전틱 스킬 프레임워크 수용]** 조항을 신설 명문화하여 제도적 기반을 완비했습니다.
+* **14대 실물 에이전틱 스킬셋 라이브러리 물리 이식 완료:**
+  - 대표님의 지시 하에 `temp_superpowers` 격리 클론 및 복사 기법을 사용해 `obra/superpowers/skills` 내의 **14대 실물 스킬 명세서 및 템플릿(46개 파일, 8,475줄)**을 최상단 `.skills/superpowers/`에 완벽하게 물리 이식 완료했습니다.
+  - 수용된 스킬셋: `brainstorming`, `using-git-worktrees`, `writing-plans`, `test-driven-development`, `subagent-driven-development`, `requesting-code-review`, `receiving-code-review`, `finishing-a-development-branch`, `executing-plans`, `dispatching-parallel-agents`, `systematic-debugging`, `verification-before-completion`, `using-superpowers`, `writing-skills`.
 * **이중 워크스페이스 Parity 동기화 및 Git 로컬 커밋 완수:**
   - `.skills/workspace-parity/scripts/sync.py` 스크립트를 자율 기동하여 Primary 워크스페이스와 Secondary 워크스페이스 간 파일 일치도 100% 동기화를 마감했습니다.
-  - `git commit -m "feat(infra): add obra/superpowers integration design plan and rule v6"` 로컬 커밋을 생성했습니다. (STRICT GIT PUSH LOCK에 따라 원격 Push는 대기)
+  - `git commit -m "feat(skills): import obra/superpowers 14 dynamic skills library"` 로컬 커밋을 생성했습니다. (STRICT GIT PUSH LOCK에 따라 원격 Push는 대기)
 
 * **변경된 핵심 파일 목록:**
   - [MEMORY.md](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/MEMORY.md) (규정 개편 및 superpowers 마감 기록 갱신)
   - [VIRTUAL_OFFICE.md](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/VIRTUAL_OFFICE.md) (제6조 Superpowers 프레임워크 수용 규칙 신설)
   - [superpowers_integration_plan.md](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/superpowers_integration_plan.md) (가상 사옥 Superpowers 플러그인 도입 및 설계 타당성 분석 보고서 신설)
+  - [.skills/superpowers/](file:///Users/jabiseu/Documents/obsidian-wiki-vault/projects/Team-203/.skills/superpowers) (신설된 14개 실물 에이전트 스킬 명세서 및 템플릿 라이브러리 폴더)
   - [task.md](file:///Users/jabiseu/.gemini/antigravity/brain/e9e32290-18f3-4a10-9130-4ebd4046d5a5/task.md) & [walkthrough.md](file:///Users/jabiseu/.gemini/antigravity/brain/e9e32290-18f3-4a10-9130-4ebd4046d5a5/walkthrough.md) (최종 완료 정리)
 
 ---
 
 ## 2. ⚠️ 현재 마주한 에러 및 미해결 이슈
-* **현재 해결해야 할 오류나 버그는 '0건'**입니다. 가상 CTO의 정교한 2차 기술 검사 피드백 조치와 대표님의 superpowers 이식성 분석 및 설계 보고서 작성까지 완료되어, 전체 시공 인프라가 완벽한 무결성과 확장성을 확보하고 있습니다.
+* **현재 해결해야 할 오류나 버그는 '0건'**입니다. 가상 CTO의 정교한 2차 기술 검사 피드백 조치와 대표님의 superpowers 14개 실물 스킬셋 이식 및 설계 보고서 작성까지 완료되어, 전체 시공 인프라가 완벽한 무결성과 확장성을 확보하고 있습니다.
 
 ---
 
 ## 3. 🎯 다음 세션에 이어서 해야 할 구체적인 목표와 할 일 (To-Do)
 
-### ① Superpowers 설계 보고서 승인 및 Git 원격 Push
-- [ ] 대표님의 최종 보고서 검토 및 "Push 승인" 하달 시 `git push origin main` 원격 최종 배포 실행.
+### ① Superpowers 설계 보고서 및 실물 이식 승인 후 Git 원격 Push
+- [ ] 대표님의 최종 결과 검토 및 "Push 승인" 하달 시 `git push origin main` 원격 최종 배포 실행.
 
 ### ② M5 Pro Max 신형 맥북 배송 완료 대기 및 셋업
 - [ ] 대표님의 신형 장비(MacBook Pro M5 Pro Max)가 배송 완료될 때까지 안전한 방치 대기 모드로 진입합니다.
@@ -57,13 +61,13 @@
 
 ### ③ 가상 사옥 에이전트 소집 및 테트리스 1단계 실무 기획 돌입
 - [ ] PM Hermes 부팅 완료 후, 가상 사옥의 상주 에이전트들(Concept-Agent 등)을 격리 폴더 `workspace/projects/game_01_tetris/concept/` 하위에 소집합니다.
-- [ ] 에이전트들이 `superpowers` 스킬 브리지(Socratic Brainstorming 및 Micro-Task Planning)를 활용하여 **Godot 4.2+ GDScript stable 규격 기반의 그리드 및 특수 예외처리 기획 명세서 물리 작성**을 기획-개발 간 TDD 프로세스로 처리하도록 서포트합니다.
+- [ ] 에이전트들이 새로 도입된 `superpowers` 스킬 브리지(Socratic Brainstorming 및 Micro-Task Planning)를 활용하여 **Godot 4.2+ GDScript stable 규격 기반의 그리드 및 특수 예외처리 기획 명세서 물리 작성**을 기획-개발 간 TDD 프로세스로 처리하도록 서포트합니다.
 
 ---
 
 ## 4. 🚨 대표님 핵심 지침 및 제약사항 (Rules & Constraints)
 * **[R&R 경계 제약] 플랫폼 빌더(Antigravity)와 실무 에이전트 간 역할 엄격 구분 (R&R Lock):**
-  - **Antigravity의 역할:** VIRTUAL-OFFICE의 전체 인프라(FastAPI 백엔드, SQLite DB, 감사실, 키체인 보안 연동, 가이드라인 런북, 동기화 스크립트, Superpowers 브리지 설계 등)를 설계하고 무결하게 구축/시공하는 **플랫폼 빌더(Platform Builder)**입니다.
+  - **Antigravity의 역할:** VIRTUAL-OFFICE of the entire infra (FastAPI 백엔드, SQLite DB, 감사실, 키체인 보안 연동, 가이드라인 런북, 동기화 스크립트, Superpowers 브리지 및 실물 스킬 수용 등)를 설계하고 무결하게 구축/시공하는 **플랫폼 빌더(Platform Builder)**입니다.
   - **사내 에이전트들의 역할:** 테트리스 게임 개발 및 기획 등 개별 프로젝트 실무는 **"맥북 수령 후 VIRTUAL-OFFICE가 완전히 구성된 이후"** 대표님이 직접 사무실에서 소집 가동하실 실무진(Concept, Art, Dev-Agent 등)의 영역입니다.
   - **절대적 제약:** Antigravity는 가상 사옥 구축 단계에서 테트리스 게임 기획 소집 및 실무 설계 영역에 어떠한 경우에도 임의로 월권하거나 개입해서는 안 되며, 오직 사옥 인프라의 완성도를 극대화하는 데에만 집중해야 합니다.
 * **[Git 컨펌 제약] Git 업로드(Push) 절대 통제:** Git 원격 저장소 (`git push`)에 작업 내용을 업로드하는 것은 **대표님께서 최종 마음에 들어 하시고 명시적으로 승인(컨펌)하셨을 때**에만 진행합니다. 에이전트가 테스트 통과나 스냅샷 등의 이유로 사전에 승인받지 않은 `git push`를 자동 수행해서는 절대로 안 됩니다. (자율 백업 및 로컬 커밋은 허용하되, 원격 Push는 100% 대표님 컨펌 이후 수동으로 진행)
