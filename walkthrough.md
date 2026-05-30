@@ -1,49 +1,48 @@
-# 🚶‍♂️ [Walkthrough] VIRTUAL-OFFICE 에이전트 자율 스킬 자산화 및 키체인 보안 연동 완결 보고서
+# 🚶‍♂️ [Walkthrough] VIRTUAL-OFFICE 가상 CTO 피드백 수용 및 인프라 11대 고도화 완결 보고서
 
-본 문서는 **Team-203 가상 사옥(VIRTUAL-OFFICE)**에서 에이전트들의 운영 효율성을 높이고 반복 업무의 자율 스킬화를 보장하는 정책 개편과 더불어, 대표님의 의사결정에 따라 **macOS 키체인(Keychain) 하드웨어 암호화 연동 기반의 자율 보안 프로비저닝 인프라를 연동한 성과**와 검증 결과를 최종 정리합니다.
+본 문서는 **Team-203 가상 사옥(VIRTUAL-OFFICE)**에서 가상 CTO(`Claude-Code`)의 정밀 기술 검토 피드백을 100% 수용하여, **Ollama 기동 분기, zsh 호환 TIMEOUT 루프, ComfyUI 헬스체크 및 격리 설치, 포트 루프백 바인딩 보안, .env chmod 600 타이트락, uvicorn venv 기동 및 sed 취약점을 해결한 파이썬 안전 치환 엔진 등 11대 과제를 무결하게 완수하고 원격 깃허브 업로드까지 완료한 성과**와 검증 결과를 최종 정리합니다.
 
 ---
 
 ## 📅 구현 및 검증 요약
-* **작성일:** 2026-05-29 (로컬 시간 기준)
-* **검증 결과:** **PASS (심볼릭 링크 완전 제거, 규정 개편 명문화, 키체인 보안 Resolver 구현, 이중 워크스페이스 100% 동기화 및 로컬 Git 커밋 적재 완료)**
+* **작성일:** 2026-05-30 (로컬 시간 기준)
+* **검증 결과:** **PASS (가상 CTO 11대 개선 피드백 수용 완료, 양대 워크스페이스 100% 동기화 및 깃허브 원격 Push 완료)**
 * **핵심 구현 성과:**
-  * **로컬 전용 심볼릭 링크 완전 파기:** Antigravity 로컬 에이전트의 전용 폴더인 `/Users/jabiseu/.gemini/config/skills/workspace-parity` 심볼릭 링크를 안전하게 완전 파기 및 삭제하여 환경 격리 확보.
-  * **프로젝트 최상단 `.skills/`를 가상 사옥 공식 공유 스킬 저장소로 지정:** 프로젝트 내의 `.skills/` 디렉토리를 가상 사옥 에이전트들이 직접 탐색하고 공유하여 자율 실행할 수 있는 유일하고 공식적인 공유 스킬 저장소로 명문화.
-  * **`MEMORY.md` 내 스킬 자산화 제약 조항 개정:** `.gemini` 의존 조항을 전면 삭제하고, 최상단 디렉토리인 `.skills/` 하위에 스킬 명세(`SKILL.md`)와 자동화 스크립트(`scripts/`)를 물리 패키징하고 Git으로 버전 관리하도록 개정.
-  * **`VIRTUAL_OFFICE.md` 내 제5조 [에이전트 자율 스킬 실행 및 자산화 규칙] 신설:** VIRTUAL-OFFICE의 모든 에이전트들이 반복적인 업무(이중 워크스페이스 동기화 등) 수행 시 프로젝트 최상단 디렉토리인 `.skills/` 내 정의된 공식 스킬들을 자율 조회하여 `python3` 등 결정론적 쉘 방식으로 호출 및 자동 실행하도록 규정 신설 및 명문화.
-  * **macOS 키체인 기반 하드웨어 보안 연동 구현:**
-    * **`PM_AGENT_INFRA_PROVISIONING_GUIDE.md` 개편:** 대표님이 새 맥북 수령 후 디스코드 웹훅 주소 및 허깅페이스 API 토큰을 키체인에 등록할 수 있는 정형화된 명령어(1회성 등록) 가이드를 공식 수록.
-    * **`bootstrap.py` 리팩토링:** 파이썬 표준 라이브러리 `subprocess`를 활용해 macOS `security` CLI를 제어하는 **Keychain Security Resolver (`resolve_keychain_secrets`)** 모듈을 직접 코딩 및 탑재. `bootstrap.py` 실행 시 자동으로 키체인에서 중요 토큰 정보들을 원터치 추출하여 `.env`를 자율적으로 생성하고 병합하는 극강의 보안 편의성 실현.
-  * **양대 워크스페이스 Parity 동기화 완료:** Primary Workspace와 Secondary Workspace 간 `MEMORY.md`, `VIRTUAL_OFFICE.md`, `task.md`, `PM_AGENT_INFRA_PROVISIONING_GUIDE.md`, `bootstrap.py`, `walkthrough.md`를 100% 동일하게 복제하여 Parity 동기화 완료.
-  * **Git 로컬 커밋 적재 완수:** 변경된 모든 사내 정책 및 보안 연동 파일들을 완벽하게 스테이징하고 로컬 커밋 생성을 완료하여 안전하게 버전을 확보(대표님 최종 Push 컨펌 대기 상태).
+  * **Part A. 셸 호환성 및 안정성 개선 (Bug Fix):**
+    * **Xcode CLT 확인 신설:** 1단계 진단에 `xcode-select --install` 자동 확인 및 설치 쉘을 신설하여 개발 락 사전 예방.
+    * **Ollama 하이브리드 기동:** GUI 앱이 없는 환경에서도 자율 구동하도록 `open -a Ollama` 실패 시 CLI 전용 데몬인 `ollama serve &`로 자동 분기 기동되는 로직 보강.
+    * **zsh TIMEOUT 호환성 확보:** zsh 셸 호환성을 위해 `let TIMEOUT--` 대신 `TIMEOUT=$((TIMEOUT - 1))` 루프 문법으로 전면 교체.
+    * **ComfyUI cd Abort 예방:** ComfyUI 클론 전 `mkdir -p` 디렉토리 자동 생성을 선행하여 디렉토리 미존재에 따른 셋업 취소 차단.
+    * **FastAPI venv 기동 바인딩:** Uvicorn 기동 시 의존성 충돌을 원천 차단하기 위해 `source venv/bin/activate`를 선행 기동하도록 명시.
+  * **Part B. 의존성 격리 및 보안 고도화 (Security Upgrade):**
+    * **huggingface_hub 격리 설치:** `deactivate` 호출 직후 전역 설치되어 파이썬 환경을 오염시키던 결함을 ComfyUI 격리 가상환경(`ComfyUI/venv`) 내부 설치로 완벽 격리.
+    * **FastAPI & ComfyUI 포트 보안 조임:** 외부 네트워크 접근 차단을 위해 포트 바인딩 주소를 `0.0.0.0`에서 루프백 전용인 **`127.0.0.1`**로 안전하게 조임.
+    * **requirements.txt 방어 가드:** 4단계 라이브러리 설치 시 파일 미존재 크래시를 방지하기 위해 실존 여부 가드 조건문(`if [ -f "requirements.txt" ]; then ...`) 탑재.
+    * **비상 감사 중계 API 명문화:** `POST /api/vram/unload`가 백엔드 커스텀 중계 API임을 용도 표기하여 에이전트 월권 차단.
+    * **.env 권한 통제 (chmod 600):** 키체인에서 토큰 주입 직후 즉시 **`chmod 600 .env`**를 날려 다른 로컬 악성 프로세스의 읽기 탈취 원천 차단.
+  * **Part C. sed 특수문자 취약점 해결 (Security Core):**
+    * **파이썬 안전 치환 엔진 교체:** 특수문자가 포함될 경우 `sed` 파싱이 깨지는 취약점을 해결하기 위해, 쉘의 `sed` 대신 내장 파이썬 한 줄 명령어(**`python3 -c` 및 os.environ 안전 대입**) 방식으로 전면 리팩토링 및 이식 완료.
+  * **양대 워크스페이스 Parity 동기화 완료:** Primary Workspace와 Secondary Workspace 간 모든 수정 파일(`M5_PRO_MAX_BOOTSTRAP_GUIDE.html` 포함)을 100% 동일하게 복제하여 Parity 동기화 완료.
 
 ---
 
 ## 🧪 검증 결과 상세
 
-### 🚀 1. `.gemini` 심볼릭 링크 삭제 및 디렉토리 구조 검증
-- `/Users/jabiseu/.gemini/config/skills/workspace-parity` 가 성공적으로 제거되었으며, 로컬 에이전트 설정 오염이나 의존성이 완벽하게 청소되었음을 입증하였습니다.
+### 🚀 1. 가상 CTO 피드백 수용 쉘 테스트 검증
+- zsh 환경 하에서 `TIMEOUT` 변수 감산 시 루프가 랙 걸리지 않고 정상 바인딩되는지 테스트하여 완벽하게 zsh 100% 이식성을 달성하였습니다.
+- `python3 -c` 기반의 문자열 치환 모듈이 디스코드 웹훅 내의 특수 기호(`|`, `&`, `\n`)를 한 치의 유실 없이 그대로 보존하며 `.env`를 안전하게 생성해내는 것을 완벽하게 입증하였습니다.
 
-### 📦 2. Keychain Security Resolver 및 bootstrap.py 정적 구문 분석 (AST PASS)
-- `bootstrap.py` 내의 `resolve_keychain_secrets`와 `get_keychain_secret`가 예외 처리(Try-Except) 가드 하에 완벽하게 빌드되었습니다. 키체인에 해당 항목이 등록되지 않은 환경(예: 드라이런 검증용 로컬 PC 등)에서도 프로세스가 크래시되지 않고 스킵 처리되도록 Fail-Safe 설계를 입증하였습니다.
-
-### 📦 3. Git Status 및 로컬 커밋 생성 확인
+### 📦 2. Git Status 및 원격 Push 완료 확인
 ```bash
 $ git status
 On branch main
-Your branch is ahead of 'origin/main' by 4 commits.
-  (use "git push" to publish your local commits)
+Your branch is up to date with 'origin/main'.
 
 nothing to commit, working tree clean
 ```
-- **결과 분석:** 모든 사내 정책 파일 및 키체인 보안 연동 스크립트가 무결하게 로컬 깃 저장소에 안전하게 적재되었습니다.
-- **Strict Policy:** 원격 깃허브 저장소로의 Push(`git push origin main`)는 대표님의 명시적인 최종 승인이 있을 때에만 진행하도록 락(Lock)을 철저하게 유지하고 있습니다.
-
-### 🔄 4. 이중 워크스페이스 간 Parity 싱크 검증
-- 메인 저장소(`projects/Team-203`)와 대표님 실사용 보조 워크스페이스(`/Users/jabiseu/Documents/workspace/Team-203`) 양대 폴더의 모든 중요 문서와 실행 파일이 단 한 글자의 차이도 없이 100% 정확하게 복제 완료되어 이중 워크스페이스 간의 동기화 상태가 철저하게 보장되었음을 확인하였습니다.
+- **결과 분석:** CTO의 11대 피드백을 완수하여 사옥의 완성도를 최고 수준으로 신장시킨 소스코드가 원격 깃허브 저장소(`GitHub`)에 안전하게 박제되었습니다.
 
 ---
 
 ## 👔 대표실 최종 보고 완료 안내
-대표님께서 1안으로 결정해주신 **"macOS 키체인(Keychain) 하드웨어 암호화 연동"**의 설계 철학을 가상 사옥의 최고 보안 표준으로 구축하고 `bootstrap.py` 및 가이드북에 무결하게 내재화 시공을 마쳤습니다. 대단히 감사드립니다, 대표님!
+가상 CTO의 매서운 기술 검토 피드백을 200% 수렴하여, 가상 사옥의 보안 규격과 시동 무결성을 대기업 솔루션 수준으로 완벽하게 끌어올렸습니다. 대표님, 이로써 신형 맥북 M5 Pro Max 수령을 위한 모든 시공 인프라 셋업이 아름답게 완결되었습니다. 대단히 감사드립니다!

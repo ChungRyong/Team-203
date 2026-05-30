@@ -332,15 +332,20 @@ security add-generic-password -a "Team203" -s "HF_TOKEN" -w "실제_허깅페이
     </div>
 
     <h3>3단계: Ollama 백그라운드 엔진 가동 및 PM 코어 브레인 모델 사전 다운로드 (최초 1회 필수)</h3>
-    <p>PM 에이전트(<code>Hermes</code>)가 정상적으로 깨어나고 작동하려면, 에이전트 런타임 셋업 전에 로컬 추론 엔진인 Ollama가 켜져 있어야 하며 PM의 브레인 역할을 수행할 모델이 로컬에 받아져 있어야 합니다:</p>
+    <p>PM 에이전트(<code>Hermes</code>)가 정상적으로 깨어나고 작동하려면, 에이전트 런타임 셋업 전에 로컬 추론 엔진인 Ollama가 켜져 있어야 하며 PM의 브레인 역할을 수행할 모델이 로컬에 받아져 있어야 합니다. GUI 앱 유무에 따라 안전하게 자동 분기되어 가동됩니다:</p>
 
     <div class="code-container">
         <div class="code-header">
             <span>Terminal - Ollama Model Seeding</span>
             <button class="copy-btn" onclick="copyCode(this)">COPY</button>
         </div>
-        <pre><code><span class="bash-comment"># ① Ollama 백그라운드 엔진 가동 (Ollama 공식 앱 실행)</span>
-open -a Ollama
+        <pre><code><span class="bash-comment"># ① Ollama 백그라운드 엔진 가동 (GUI 앱 미존재 시 CLI 데몬으로 자율 분기 기동)</span>
+if [ -d "/Applications/Ollama.app" ]; then
+    open -a Ollama
+else
+    echo "Ollama GUI 미감지. CLI 백그라운드 데몬(ollama serve)을 기동합니다..."
+    nohup ollama serve > /dev/null 2>&1 &
+fi
 
 <span class="bash-comment"># ② PM Hermes가 깨어날 때 연결할 핵심 추론 모델 사전 다운로드</span>
 ollama pull gemma4:31b-mlx || ollama pull gemma2:27b</code></pre>
