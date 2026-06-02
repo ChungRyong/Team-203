@@ -2,342 +2,70 @@
 
 > [!NOTE]
 > **수신인:** 수석 PM 에이전트 `Hermes` (Gemma 4 31B MLX)
-> **목적:** 대표님 박청룡님의 지시 수령 시, M5 Pro Max 로컬 시스템에서 자율적으로 터미널 쉘 권한을 획득하여 개발 도구, Ollama 모델 편대, ComfyUI 그래픽 엔진, 백엔드 데이터베이스 세팅 및 오케스트레이터를 원스톱으로 무인 설치(Provisioning)하고 가동하는 표준 실무 매뉴얼.
-
-본 문서는 수석 PM `Hermes`가 스스로 독파하여 쉘 커맨드를 자율적으로 호출하기 위한 실무 런북(Runbook)입니다. 각 단계를 실행할 때 명령어의 오류 여부를 검사하고, 오류 발생 시 본 가이드에 제시된 예외 처리 규칙에 따라 자가 치유(Self-Healing)를 집행하십시오.
+> **목적:** M5 Pro Max 로컬 시스템에서 자율적으로 인프라를 구축하고 가동하는 표준 실무 매뉴얼.
 
 ---
 
 ## 📊 전체 자율 프로비저닝 워크플로우
-
 ```mermaid
 graph TD
-    Start["대표님 셋업 지시 수령<br>(Discord DM/CLI)"] --> Step1["1단계: M5 Pro Max 환경 진단 및 Brew 설치 검사"]
-    Step1 --> Step2["2단계: Ollama 설치 및 MLX 정예 편대 다운로드"]
-    Step2 --> Step3["3단계: ComfyUI 설치 및 Flux.1 가중치 배치"]
-    Step3 --> Step4["4단계: 가상환경(venv) 구축 및 SQLite DB 시딩"]
-    Step4 --> Step5["5단계: FastAPI 백엔드 기동 및 오케스트레이터 시동"]
-    Step5 --> End["디스코드 청색 완료 보고<br>(실시간 OHI 감사 요약 취합)"]
+    Start["셋업 지시 수령"] --> Step1["1단계: 환경 진단 및 기초 도구 설치"]
+    Step1 --> Step2["2단계: Ollama 및 MLX 모델 편대 구축"]
+    Step2 --> Step3["3단계: ComfyUI 격리 환경 구축(v3.13)"]
+    Step3 --> Step4["4단계: 백엔드 venv 구축 및 DB 시딩"]
+    Step4 --> Step5["5단계: FastAPI 서버 기동 및 오케스트레이터 실행"]
+    Step5 --> End["최종 완료 보고"]
 ```
 
 ---
 
-## 🛠️ 세부 자율 집행 프로토콜 및 쉘 명령어 세트
+## 🛠️ 세부 자율 집행 프로토콜
 
 ### [1단계] macOS 기초 환경 진단 및 Homebrew 검사
-PM 에이전트는 M5 Pro Max의 시스템 리소스와 필수 패키지 관리자의 설치 여부를 진단합니다.
+**지침:** 에이전트는 아래 순서로 진행하며, `sudo` 권한이 필요한 구간에서는 사용자에게 수동 실행을 요청하십시오.
 
-1. **Xcode Command Line Tools 설치 여부 확인 및 자동 가동:**
-   - git 및 python 빌드에 필수적인 Xcode Command Line Tools가 설치되어 있는지 확인하고 없으면 설치합니다.
-   ```bash
-   if ! xcode-select -p &> /dev/null; then
-       echo "Xcode Command Line Tools 미감지. 설치를 시작합니다..."
-       xcode-select --install
-       # 대표님 수동 설치 팝업 확인을 위해 대기 안내 (물리 팝업 승인 필수 한계 명시 - CTO 피드백 수렴)
-       echo "⚠️ Xcode CLT 설치는 100% 무인 자동 처리가 불가하며 macOS 보안 팝업 승인이 필수적입니다."
-       echo "화면에 뜬 팝업 가이드에 따라 대표님이 직접 '설치' 버튼을 클릭하여 완료 후 계속 진행하십시오."
-   fi
-   ```
+1. **Xcode CLT 설치 확인:** `xcode-select -p` 미감지 시 `xcode-select --install` 후 사용자의 팝업 승인을 대기합니다.
+2. **Homebrew 설치 제어:** 
+   - `brew --version` 확인. 미설치 시 사용자에게 `/bin/bash -c "$(curl -fsSL ...)"` 명령어를 실행하도록 안내하십시오. (에이전트가 직접 실행 시 sudo 암호 입력 단계에서 차단됨)
+3. **환경 변수 즉시 반영:** 
+   - 설치 후 반드시 세션 내에서 `export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"` 및 `eval "$(/opt/homebrew/bin/brew shellenv)"`를 수행하십시오.
+4. **Python 3.13 및 Git 설치:** 
+   - `brew install python@3.13 git` 실행 후 `brew link --overwrite python@3.13`로 심볼릭 링크를 강제 갱신하십시오.
 
-2. **하드웨어 아키텍처 및 칩셋 검사:**
-   ```bash
-   uname -m && sysctl -n machdep.cpu.brand_string
-   ```
-   *(출력이 `arm64` 및 Apple M5 Pro Max 제품군인지 확인하여 메모리 스왑 효율성을 사전 계산합니다.)*
+### [2단계] Ollama 설치 및 MLX 정예 편대 다운로드
+1. **Ollama 설치:** `brew install --cask ollama`
+2. **데몬 기동 폴링:** `open -a Ollama` 후 `http://127.0.0.1:11434/api/tags` 응답이 올 때까지 최대 30초간 루프로 대기하십시오.
+3. **모델 풀링 (Fail-Safe):** `ollama pull qwen3.6:35b-mlx || ollama pull qwen2.5:32b` 및 `ollama pull gemma4:31b-mlx || ollama pull gemma2:27b` 순으로 적재하십시오. (용량이 크므로 백그라운드 실행 권장)
 
-3. **Homebrew 설치 여부 확인 및 설치:**
-   - 터미널에서 `brew --version`을 실행하여 Homebrew가 없을 경우, 아래 명령어를 실행하여 무인 설치합니다.
-   ```bash
-   if ! command -v brew &> /dev/null; then
-       echo "Homebrew 미감지. 자동 설치를 시작합니다..."
-       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-       # Apple Silicon 경로 반영
-       echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-       eval "$(/opt/homebrew/bin/brew shellenv)"
-   fi
-   ```
+### [3단계] ComfyUI 격리 환경 구축 (Python v3.13 강제)
+**중요:** 시스템 기본 Python(v3.9 등)과 충돌하여 `av`나 `torch` 설치 실패가 빈번합니다. 반드시 명시적 버전을 사용하십시오.
 
-4. **Python 및 Git 설치:**
-   - 현재 개발 환경 기준 Python 3.13을 사용합니다. `python@3.11`로 고정하면 신규 장비에서 버전 불일치가 발생할 수 있습니다.
-   ```bash
-   brew install python@3.13 git
-   # Apple Silicon 심볼릭 링크 갱신
-   brew link --overwrite python@3.13
-   ```
+1. **격리 클론 및 venv 생성:**
+   - `python3.13 -m venv ComfyUI/venv` (명시적으로 3.13 사용)
+2. **패키지 설치:** `ComfyUI/venv/bin/pip install -r requirements.txt`를 통해 전역 오염 없이 설치하십시오.
+3. **가중치 배치:** HuggingFace CLI로 `flux1-dev.safetensors`를 다운로드하여 `models/checkpoints/`에 배치하십시오.
+
+### [4단계] 백엔드 venv 구축 및 보안 주입
+1. **백엔드 전용 venv 생성:** `python3.13 -m venv venv`
+2. **보안 키 주입 (.env):** 
+   - `security find-generic-password`를 통해 Discord Webhook과 HF Token을 가져와 `.env`에 기록하십시오. 
+   - 완료 즉시 `chmod 600 .env`로 쓰기 권한을 제한하십시오.
+3. **DB 시딩:** `venv/bin/python bootstrap.py`를 실행하여 로컬 DB 스키마를 생성하십시오.
+
+### [5단계] FastAPI 서버 및 오케스트레이터 기동
+1. **포트 프리클리닝 (Pre-flight):** 
+   - `lsof -t -i:8000`으로 프로세스 ID 확인 후 `kill -9 $PID`를 수행하여 포트 충돌을 사전에 방지하십시오.
+2. **서버 기동:** `venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` (백그라운드 실행)
+3. **오케스트레이터 시동:** `venv/bin/python orchestrator.py TASK-LIVE-001`
 
 ---
 
-### [2단계] Ollama 설치 및 Apple Silicon 최적화 MLX 정예 편대 다운로드
-M5 Pro Max의 96GB~128GB+ 초고대역폭 통합 메모리(Unified Memory) 자원을 극대화하기 위해, 불필요한 중복 로딩을 피하고 **단 2종의 핵심 MLX 최적화 추론 모델**을 로컬에 영구 적재합니다.
-
-1. **Ollama CLI 및 Cask 클라이언트 설치:**
-   ```bash
-   if ! command -v ollama &> /dev/null; then
-       echo "Ollama 미감지. Brew Cask를 통한 자동 무인 설치를 기동합니다..."
-       brew install --cask ollama
-   fi
-   ```
-
-2. **Ollama 백그라운드 엔진 가동 상태 진단 및 결정적 폴링(Polling) 시동:**
-   - Ollama 데몬을 켠 뒤, 고정 지연(sleep) 대신 최대 30초 동안 API가 활성화될 때까지 루프로 결정적 폴링을 수행합니다.
-   - **GUI 앱 vs CLI 백그라운드 분기 (CTO 피드백 수렴):** `/Applications/Ollama.app` 존재 여부에 따라 자동 분기 기동을 보장합니다.
-   - **zsh 호환 TIMEOUT 루프:** macOS zsh 셸 호환성을 위해 `let TIMEOUT--` 대신 `TIMEOUT=$((TIMEOUT - 1))`를 적용하고 포트를 로컬 전용 `127.0.0.1`로 좁혀 통신을 잠급니다.
-   ```bash
-   if ! curl -s http://127.0.0.1:11434/api/tags &> /dev/null; then
-       echo "Ollama 데몬이 실행 중이 아닙니다. 데몬 기동을 시작합니다..."
-       
-       if [ -d "/Applications/Ollama.app" ]; then
-           open -a Ollama
-       else
-           echo "Ollama GUI 미감지. CLI 백그라운드 데몬(ollama serve)을 기동합니다..."
-           nohup ollama serve > /dev/null 2>&1 &
-       fi
-       
-       # 결정적 zsh 호환 폴링 기동 (최대 30초)
-       TIMEOUT=30
-       while [ $TIMEOUT -gt 0 ]; do
-           if curl -s http://127.0.0.1:11434/api/tags &> /dev/null; then
-               echo "Ollama 데몬 활성화 확인 완료."
-               break
-           fi
-           echo "Ollama 데몬 대기 중... (${TIMEOUT}초 남음)"
-           sleep 1
-           TIMEOUT=$((TIMEOUT - 1))
-       done
-       
-       if [ $TIMEOUT -eq 0 ]; then
-           echo "❌ Ollama 데몬 부팅 대기 시간 초과. 프로비저닝을 즉각 중단합니다."
-           exit 1
-       fi
-   fi
-   ```
-
-3. **MLX 정예 편대 모델 자동 풀링(Pull) 및 대체제 태그 확보:**
-   - PM은 에이전트들이 사용할 MLX 최적화 모델 2종을 차례로 다운로드하며, 각 다운로드 시간을 측정하여 감사실(`system_audit_logs`)에 `INFRA_PROVISION` 이벤트로 로깅합니다.
-   - 로컬 커스텀 MLX 모델 가중치 임포트가 누락된 빌드 환경에서는, Ollama 공식 라이브러리 검증 모델(`qwen2.5:32b` 또는 `gemma2:27b` 등)을 대체 우선순위로 확보하여 Fail-Safe를 달성합니다.
-   ```bash
-   # ① Concept-Agent, Dev-Agent 등 수석급 에이전트용 고성능 코딩 모델
-   ollama pull qwen3.6:35b-mlx || ollama pull qwen2.5:32b
-   
-   # ② 수석 PM Hermes의 오케스트레이션 및 Blinky 요약 공용 핵심 추론 모델
-   ollama pull gemma4:31b-mlx || ollama pull gemma2:27b
-   ```
+## 🛡️ 자가 치유(Self-Healing) 및 예외 처리 규칙
+- **Python 버전 충돌:** `pip install` 중 `Requires-Python >=3.10` 에러 발생 시, venv를 삭제하고 반드시 `python3.13 -m venv`로 다시 생성하십시오.
+- **포트 점유 실패:** 서버 기동 전 `lsof` -> `kill` 프로세스를 거쳐 포트를 완전히 비운 뒤 재시도하십시오.
+- **Ollama 타임아웃:** 모델 풀링 중 타임아웃 발생 시, 백그라운드 프로세스로 전환하여 진행률을 모니터링하십시오.
 
 ---
 
-### [3단계] ComfyUI (Flux.1) 그래픽 로컬 서버 구축 (격리 가상환경 및 클론 경로 명시)
-Art-Agent가 대표님의 게임 기획에 맞춰 화려한 와이어프레임과 스프라이트 리소스를 실시간 렌더링할 수 있도록 그래픽 파이프라인을 격리하여 구축합니다.
-
-1. **ComfyUI 격리 클론 및 전용 가상환경(venv) 구축:**
-   - 전역 라이브러리 오염을 원천 차단하기 위해, 반드시 **Team-203 프로젝트 산하의 지정된 서브 디렉토리**에 클론하고 전용 가상환경을 활성화하여 패키지를 설치합니다.
-   - **디렉토리 사전 확보 (CTO 피드백 수렴):** 클론 전 `mkdir -p`를 선행 호출하여 경로 미존재에 따른 실패를 사전 예방합니다.
-   ```bash
-   # 1. 사옥 프로젝트 폴더로 이동 및 격리 클론
-   mkdir -p /Users/jabiseu/Documents/workspace/Team-203
-   cd /Users/jabiseu/Documents/workspace/Team-203
-   git clone https://github.com/comfyanonymous/ComfyUI.git
-   
-   # 2. ComfyUI 전용 격리 venv 생성 및 활성화
-   python3 -m venv ComfyUI/venv
-   source ComfyUI/venv/bin/activate
-   
-   # 3. 격리된 환경에 의존성 라이브러리 및 huggingface_hub 설치 (전역 오염 방지)
-   pip install --upgrade pip
-   pip install -r ComfyUI/requirements.txt
-   pip install huggingface_hub
-   ```
-
-2. **Flux.1 가중치(FP8 Checkpoint) 무인 다운로드 및 경로 자동 배치:**
-   - `ComfyUI/models/checkpoints/` 하위에 무결한 Flux.1 체크포인트가 존재하는지 스캔하고, 없을 경우 HuggingFace CLI를 통해 인증 후 다운로드합니다.
-   - **격리 venv 유지:** 여전히 ComfyUI venv가 활성화된 상태에서 전역 오염 없이 HuggingFace 인증 다운로드를 집행합니다.
-   ```bash
-   cd /Users/jabiseu/Documents/workspace/Team-203/ComfyUI
-   
-   # ① Keychain에서 HF_TOKEN 직접 조회 (4단계 .env 생성 이전 시점이므로 직접 획득)
-   HF_TOKEN=$(security find-generic-password -a "Team203" -s "HF_TOKEN" -w)
-   
-   # ② HuggingFace 토큰 인증
-   #    사전에 https://huggingface.co/black-forest-labs/FLUX.1-dev 에서 라이선스 동의 필수
-   huggingface-cli login --token "$HF_TOKEN"
-   
-   # ② 체크포인트 존재 여부 확인 후 다운로드
-   CHECKPOINT_PATH="models/checkpoints/flux1-dev.safetensors"
-   if [ ! -f "$CHECKPOINT_PATH" ]; then
-       echo "Flux.1 체크포인트를 찾을 수 없습니다. HuggingFace에서 인증 다운로드를 시작합니다..."
-       huggingface-cli download black-forest-labs/FLUX.1-dev \
-           flux1-dev.safetensors \
-           --local-dir models/checkpoints/
-   else
-       echo "✅ Flux.1 체크포인트 이미 존재. 다운로드를 건너뜁니다."
-   fi
-   
-   # ComfyUI venv 비활성화 및 복귀
-   deactivate
-   cd ..
-   ```
-
-3. **ComfyUI API 서버 백그라운드 구동 및 헬스 체크 폴링:**
-   - 로컬 바인딩을 `0.0.0.0`에서 안전한 루프백 `127.0.0.1`로 좁혀 외부 침입 보안을 수호합니다.
-   ```bash
-   source ComfyUI/venv/bin/activate
-   nohup python3 ComfyUI/main.py --listen 127.0.0.1 --port 8188 > ComfyUI/comfyui.log 2>&1 &
-   deactivate
-   
-   # ComfyUI API 기동 결정적 헬스 체크 폴링 신설 (최대 30초)
-   TIMEOUT=30
-   while [ $TIMEOUT -gt 0 ]; do
-       if curl -s http://127.0.0.1:8188 &> /dev/null; then
-           echo "ComfyUI 로컬 서버(Port: 8188) 활성화 확인 완료."
-           break
-       fi
-       echo "ComfyUI 로컬 서버 대기 중... (${TIMEOUT}초 남음)"
-       sleep 1
-       TIMEOUT=$((TIMEOUT - 1))
-   done
-   
-   if [ $TIMEOUT -eq 0 ]; then
-       echo "⚠️ ComfyUI 부팅 대기 시간 초과 경보. 로그(/ComfyUI/comfyui.log)를 확인하십시오."
-   fi
-   ```
-
----
-
-### [4단계] Team-203 백엔드 가상환경(venv) 구축 및 SQLite 데이터베이스 시딩
-가상 스튜디오의 핵심 제어 데이터베이스인 `hermes_soul.db` 테이블 스키마와 물리 샌드박스 영역을 구축합니다.
-
-1. **프로젝트 루트 디렉토리 이동 및 가상환경(venv) 구축:**
-   - **의존성 파일 실존 안전 가드 탑재:** `requirements.txt`가 존재하는 경우에만 `pip install -r`을 안전하게 기동합니다.
-   ```bash
-   cd /Users/jabiseu/Documents/workspace/Team-203
-   python3 -m venv venv
-   source venv/bin/activate
-   
-   if [ -f "requirements.txt" ]; then
-       pip install -r requirements.txt
-   else
-       echo "⚠️ requirements.txt 미감지. 기본 FastAPI/SQLite/Uvicorn 패키지를 개별 설치합니다..."
-       pip install fastapi uvicorn requests
-   fi
-   ```
-
-2. **macOS Keychain(키체인) 기반의 하드웨어 보안 키 주입 및 .env 자동 생성:**
-   - ⚠️ **민감한 보안 정보 유출 방지 조치:** Discord Webhook URL 및 HuggingFace Token과 같은 중요 인증키는 소스코드나 텍스트 파일에 노출하지 않고, macOS의 키체인에 하드웨어 암호화로 격리 보관합니다.
-   - **`sed` 파싱 취약점 원천 해결 (Python 3 원라인 치환):** 디스코드 웹훅의 특수문자(`|`, `&`, `\n`) 오작동 및 보안 손상을 유발하던 `sed` 대신, 완벽한 파이썬 환경 변수 매핑 치환으로 안전하게 주입합니다.
-   - **`.env Secured Lock (chmod 600)` 신설:** 주입 완료 즉시 다른 사용자/프로세스의 탈취를 방지하기 위해 파일 권한을 안전하게 소유자 전용으로 격리합니다.
-   ```bash
-   # 키체인에서 Discord Webhook URL 및 HF_TOKEN을 원터치로 파싱하여 .env에 임포트
-   DISCORD_URL=$(security find-generic-password -a "Team203" -s "Discord_Webhook_URL" -w)
-   HF_VAL=$(security find-generic-password -a "Team203" -s "HF_TOKEN" -w)
-   
-   cp .env.example .env
-   
-   # shell 변수를 python3 subprocess 환경으로 전달하기 위해 export
-   export DISCORD_URL HF_VAL
-   
-   # Python3 기반 특수문자 무결성 치환 엔진 가동 (CTO 피드백 수렴)
-   python3 -c "
-   import os
-   env_path = '.env'
-   with open(env_path, 'r') as f:
-       lines = f.readlines()
-   
-   updated = []
-   for line in lines:
-       if line.startswith('DISCORD_WEBHOOK_URL='):
-           updated.append(f'DISCORD_WEBHOOK_URL=' + os.environ.get('DISCORD_URL', '') + '\n')
-       elif line.startswith('HF_TOKEN='):
-           updated.append(f'HF_TOKEN=' + os.environ.get('HF_VAL', '') + '\n')
-       else:
-           updated.append(line)
-           
-   with open(env_path, 'w') as f:
-       f.writelines(updated)
-   "
-   
-   # .env 파일 보안 권한 타이트락 (chmod 600)
-   chmod 600 .env
-   echo "✅ .env 생성 완료 및 chmod 600 보안 잠금 완료."
-   ```
-
-3. **가상 사옥 데이터베이스 테이블 설계 및 물리 샌드박스 시딩 (`bootstrap.py`):**
-   ```bash
-   python3 bootstrap.py
-   ```
-
----
-
-### [5단계] FastAPI 백엔드 API 기동 및 PM 오케스트레이터 가동
-가상 오피스의 실무 협업 통로인 소회의실 백엔드 라우터를 부팅하고 최초 개발 공정의 시동을 겁니다.
-
-1. **FastAPI Uvicorn API 서버 백그라운드 구동 및 API 결정적 폴링:**
-   - **의존성 불일치 원천 예방:** Uvicorn 기동 전에 반드시 격리 가상환경(`source venv/bin/activate`)을 활성화합니다.
-   - **포트 보안 조임:** 외부 접근 차단을 위해 루프백 주소인 `127.0.0.1`로 엄격히 바인딩합니다.
-   ```bash
-   source venv/bin/activate
-   nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > fastapi.log 2>&1 &
-   
-   # FastAPI 포트 개방 결정적 폴링 (zsh 호환 TIMEOUT 루프)
-   TIMEOUT=30
-   while [ $TIMEOUT -gt 0 ]; do
-       if curl -s http://127.0.0.1:8000/api/tasks &> /dev/null; then
-           echo "FastAPI 백엔드가 성공적으로 가동되었습니다."
-           break
-       fi
-       echo "FastAPI 백엔드 대기 중... (${TIMEOUT}초 남음)"
-       sleep 1
-       TIMEOUT=$((TIMEOUT - 1))
-   done
-   
-   if [ $TIMEOUT -eq 0 ]; then
-       echo "❌ FastAPI 백엔드 시동 시간 초과. 가동을 취소합니다."
-       exit 1
-   fi
-   ```
-
-2. **최초 실전 테트리스 개발 공정 (TASK-LIVE-001) 기동:**
-   ```bash
-   python3 orchestrator.py TASK-LIVE-001
-   ```
-
----
-
-## 🛡️ 예외 처리 및 우아한 자가 치유(Graceful Self-Healing) 규칙
-
-PM Hermes는 각 단계 명령어의 Exit Code가 `0`이 아닐 경우 다음 조치를 즉각 실행하십시오.
-
-1. **Brew Cask 설치 실패 시 (`Ollama` / `MacTeX` 등):**
-   - 만약 Brew Cask 설치가 실패하면, 공식 다운로드 URL(curl)을 이용해 바이너리를 직접 가져와 `/Applications` 경로로 복사하는 우회 수동 쉘을 빌드해 실행하시오.
-2. **Ollama OOM 또는 추론 타임아웃 발생 시 (VRAM 해제):**
-   - **용도 명확화 (FastAPI 커스텀 중계 API):** `POST /api/vram/unload`는 Ollama 공식 API가 아닌 **가상 사옥 FastAPI 백엔드 중계 API** (`http://127.0.0.1:8000/api/vram/unload`)입니다.
-   - 만약 Ollama 엔진에 직접 모델 언로드를 명령해야 하는 로우레벨 쉘에서는, 공식 규격에 따라 `POST http://127.0.0.1:11434/api/chat` (또는 `/api/generate`)으로 **`"keep_alive": 0`** 또는 비어 있는 모델 값을 송신하여 즉각 VRAM 캐시를 Flush 하시오.
-3. **ComfyUI 포트 충돌 발생 시 (8188) - 우아한 프로세스 강제 종료:**
-   - 포트 충돌 감지 시, 즉각 강제 종료(`kill -9`)를 날리지 말고 **SIGTERM(기본 kill) 호출 및 3초 대기** 후, 종료되지 않을 때만 마지막 수단으로 SIGKILL(`kill -9`)을 실행하시오.
-   ```bash
-   PID=$(lsof -t -i:8188)
-   if [ ! -z "$PID" ]; then
-       echo "포트 8188에 ComfyUI 중복 프로세스 감지 (PID: $PID). 우아하게 종료를 요청합니다..."
-       kill $PID
-       sleep 3
-       
-       if kill -0 $PID 2>/dev/null; then
-           echo "프로세스가 여전히 활성 상태입니다. SIGKILL 강제 종료를 집행합니다."
-           kill -9 $PID
-       fi
-   fi
-   ```
-
----
-
-## 🏆 대표실 완료 보고 및 대시보드 실시간 쿼리 보고 규칙
-
-> [!IMPORTANT]
-> **PM 에이전트 Hermes 준수 사항:**
-> 무인 프로비저닝이 완료되면 디스코드 대표실 채널로 완료 보고 카드를 발송하시오. **이때 모든 건강 지표 점수는 가이드 상에 적힌 값을 복사 붙여넣기(하드코딩)하지 말고, 반드시 기동된 API 서버 `GET http://127.0.0.1:8000/api/audit/summary`를 동적으로 쿼리하여 실제 연산된 스코어 데이터를 취합해 실시간 동적 임베드로 보고하시오.**
-
-* **디스코드 실시간 보고 포맷 ( Hermes는 API 결과를 여기에 실시간 주입할 것):**
-  - **종합 사내 건강성 지수 (Office Health Index):** `[API 결과에서 가져온 종합 지수 %]`
-  - **VRAM Health (VRAM 반환율):** `[API 결과 %]`
-  - **CTO Compliance (CTO 준수율):** `[API 결과 %]`
-  - **Backup Reliability (백업 신뢰도):** `[API 결과 %]`
-  - **Discipline Level (디시플린 스코어):** `[API 결과 %]`
-  - **QA Health (게임 QA 합격률):** `[API 결과 %]`
+## 🏆 완료 보고 규칙
+최종 기동 후 `GET http://127.0.0.1:8000/api/audit/summary`를 통해 실제 연산된 건강성 지표(OHI)를 취합하여 보고하십시오.
