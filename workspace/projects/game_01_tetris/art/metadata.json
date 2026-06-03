@@ -23,6 +23,18 @@
       "is_fallback": true,
       "fallback_reason": "ComfyUI prompt API returned error status: 400",
       "created_at": "2026-06-02T14:12:35Z"
+    },
+    {
+      "filename": "ui_wireframe_03.png",
+      "asset_type": "UI_WIREFRAME",
+      "prompt": "[Art-Agent Fallback Response] oMLX API\uac00 \ubd88\uc548\uc815\ud569\ub2c8\ub2e4. \ud0dc\uc2a4\ud06c\ub97c \uc9c0\uc18d \uc9c4\ud589\ud558\uae30 \uc704\ud574 \ub85c\uceec \ubc31\uc5c5 \ub85c\uc9c1\uc744 \uad6c\ub3d9\ud569\ub2c8\ub2e4.",
+      "seed": 1337263018,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "steps": 20,
+      "is_fallback": true,
+      "fallback_reason": "ComfyUI offline or connection failed: HTTPConnectionPool(host='localhost', port=8188): Max retries exceeded with url: /prompt (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8188): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "created_at": "2026-06-03T01:34:53Z"
     }
   ]
 }
