@@ -261,10 +261,10 @@ def get_room_context(room_id: str):
         else:
             active_msgs.append(msg)
             
-    # Inject baseline system context if summary exists
+    # Inject baseline context if summary exists
     if system_summary:
         formatted_messages.append({
-            "role": "system",
+            "role": "user",
             "content": (
                 f"### [Blinky Baseline Context Summary]\n"
                 f"다음은 이전 회의실 세션의 압축 요약입니다. 본 맥락을 이정표로 삼아 대화를 재개해 주세요.\n\n"
@@ -273,7 +273,7 @@ def get_room_context(room_id: str):
         })
     else:
         formatted_messages.append({
-            "role": "system",
+            "role": "user",
             "content": f"회의실 '{room['room_name']}'에 입장하셨습니다. 프로젝트 태스크를 위해 토론을 시작해 주세요."
         })
         

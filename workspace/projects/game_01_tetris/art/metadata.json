@@ -35,6 +35,18 @@
       "is_fallback": true,
       "fallback_reason": "ComfyUI offline or connection failed: HTTPConnectionPool(host='localhost', port=8188): Max retries exceeded with url: /prompt (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8188): Failed to establish a new connection: [Errno 61] Connection refused\"))",
       "created_at": "2026-06-03T01:34:53Z"
+    },
+    {
+      "filename": "ui_wireframe_04.png",
+      "asset_type": "UI_WIREFRAME",
+      "prompt": "A precise technical wireframe and UI/UX asset for a Tetris game interface, featuring a 10x20 main grid, next piece preview panel, score and level display, lock delay and soft drop speed indicators, state feedback overlays, clean grid-aligned layout, high-contrast functional components, vector-style wireframe, no artistic effects, ComfyUI Flux.1 optimized.",
+      "seed": 1366729398,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "steps": 20,
+      "is_fallback": true,
+      "fallback_reason": "ComfyUI offline or connection failed: HTTPConnectionPool(host='localhost', port=8188): Max retries exceeded with url: /prompt (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8188): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "created_at": "2026-06-03T01:37:05Z"
     }
   ]
 }
