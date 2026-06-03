@@ -46,7 +46,7 @@ class TestSystemAudits(unittest.TestCase):
         payload = {
             "event_type": "VRAM_UNLOAD",
             "status": "SUCCESS",
-            "details": {"model": "qwen3.6:35b-mlx"},
+            "details": {"model": "Qwen3.6-35B-A3B-8bit"},
             "elapsed_ms": 150
         }
         res = self.client.post("/api/audit/log", json=payload)
@@ -63,7 +63,7 @@ class TestSystemAudits(unittest.TestCase):
         self.assertEqual(row["status"], "SUCCESS")
         self.assertEqual(row["elapsed_ms"], 150)
         details = json.loads(row["details"])
-        self.assertEqual(details["model"], "qwen3.6:35b-mlx")
+        self.assertEqual(details["model"], "Qwen3.6-35B-A3B-8bit")
 
     def test_audit_summary_calculation(self):
         # 1. Seed different logs to compute metrics

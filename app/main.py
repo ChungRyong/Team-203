@@ -26,7 +26,25 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     # Double check tables are initialized
     database.create_tables()
+    
+    # Auto-seed core agents unconditionally (INSERT OR IGNORE) to ensure Hermes and other agents always exist in DB
+    conn = database.get_db_connection()
+    try:
+        core_agents = ["Hermes", "Concept-Agent", "Art-Agent", "Dev-Agent", "Blinky"]
+        for agent in core_agents:
+            conn.execute(
+                "INSERT OR IGNORE INTO agent_penalties (agent_name, warning_count, is_penalized) VALUES (?, 0, 0)",
+                (agent,)
+            )
+        conn.commit()
+        print("🌱 [Auto-seed] Core agents successfully seeded/checked in database.")
+    except Exception as e:
+        print(f"⚠️ [lifespan] Failed to auto-seed core agents: {e}")
+    finally:
+        conn.close()
+
     yield
+
 
 app = FastAPI(
     title="Team-203 Virtual Office Meeting Room Engine",
@@ -70,7 +88,7 @@ class PromptRequest(BaseModel):
     base_prompt: str = Field(..., json_schema_extra={"example": "당신은 수석 엔지니어입니다. 코드를 구현해 주세요."})
 
 class VramUnloadRequest(BaseModel):
-    model: str = Field(..., json_schema_extra={"example": "qwen3.6:35b-mlx"})
+    model: str = Field(..., json_schema_extra={"example": "Qwen3.6-35B-A3B-8bit"})
 
 class ArtGenerateRequest(BaseModel):
     project_id: str = Field(..., json_schema_extra={"example": "game_01_tetris"})
@@ -81,7 +99,7 @@ class ArtGenerateRequest(BaseModel):
 class AuditLogCreate(BaseModel):
     event_type: str = Field(..., json_schema_extra={"example": "VRAM_UNLOAD"})
     status: str = Field(..., json_schema_extra={"example": "SUCCESS"})
-    details: Optional[dict] = Field(None, json_schema_extra={"example": {"model": "qwen3.6:35b-mlx"}})
+    details: Optional[dict] = Field(None, json_schema_extra={"example": {"model": "Qwen3.6-35B-A3B-8bit"}})
     elapsed_ms: Optional[int] = Field(None, json_schema_extra={"example": 120})
 
 class QaVerifyRequest(BaseModel):
@@ -277,8 +295,13 @@ def post_message(room_id: str, msg: MessageCreate):
     try:
         msg_id = database.add_message(room_id, msg.sender_role, msg.content, msg.payload_type)
         
+        # Restore agent status to IDLE when they post a message (finish turn)
+        if msg.sender_role in ["Concept-Agent", "Art-Agent", "Dev-Agent", "Blinky", "Hermes"]:
+            database.update_agent_status(msg.sender_role, "IDLE")
+            
         # Intercept with Blinky Observer Context Compression Middleware
         check_and_compress_context(room_id)
+
         
         return {
             "status": "success", 
@@ -365,8 +388,19 @@ def close_meeting_room(room_id: str):
     
     database.close_room(room_id)
     
+    # Reset all agents' status back to IDLE on close
+    conn = database.get_db_connection()
+    try:
+        conn.execute("UPDATE agent_penalties SET status = 'IDLE'")
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Failed to reset agent statuses on room close: {e}")
+    finally:
+        conn.close()
+        
     # Archive all active messages from the closed room
     database.archive_room_messages(room_id)
+
     
     # Trigger background Git snapshot backup
     git_start = time.perf_counter()
@@ -434,10 +468,12 @@ def get_agent_prompt(agent_name: str, req: PromptRequest):
         raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not registered in penalty profiles.")
         
     try:
+        database.update_agent_status(agent_name, "RUNNING")
         res = get_agent_system_prompt(agent_name, req.base_prompt)
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/agents/{agent_name}/pardon")
 def pardon_agent(agent_name: str):

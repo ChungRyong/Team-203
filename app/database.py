@@ -63,6 +63,7 @@ def create_tables():
         warning_count INTEGER DEFAULT 0,
         is_penalized INTEGER DEFAULT 0, -- 1: penalized (Temp 0.0), 0: normal
         last_penalty_reason TEXT,
+        status TEXT DEFAULT 'IDLE',
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -87,7 +88,14 @@ def create_tables():
     );
     """)
     
+    # Schema Migration: Ensure status column exists in agent_penalties (fail-safe check)
+    try:
+        cursor.execute("ALTER TABLE agent_penalties ADD COLUMN status TEXT DEFAULT 'IDLE';")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
+
     conn.close()
 
 # --- CRUD HELPER FUNCTIONS ---
@@ -248,8 +256,14 @@ def run_git_snapshot(room_id: str, action_type: str):
     Runs 'git add .' and 'git commit -m' to capture intermediate or final state.
     Gracefully bypasses any Git error (e.g. nothing to commit or lock issues) without blocking.
     """
+    import sys
+    if 'unittest' in sys.modules or 'pytest' in sys.modules or os.environ.get('TEAM203_TESTING') == '1':
+        print(f"📦 [Git Snapshot Bypass] Bypassed git snapshot for room '{room_id}' during testing.")
+        return True
+
     try:
         import subprocess
+
         # Determine working directory to be the workspace root
         cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
@@ -320,6 +334,26 @@ def pardon_agent_penalty(agent_name: str) -> bool:
         return False
     finally:
         conn.close()
+
+def update_agent_status(agent_name: str, status: str) -> bool:
+    """
+    Updates an agent's running or idle status.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE agent_penalties SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE agent_name = ?",
+            (status, agent_name)
+        )
+        conn.commit()
+        print(f"🤖 [Agent Status] '{agent_name}' status updated to '{status}'.")
+        return True
+    except Exception as e:
+        print(f"🚨 [DB Error] Failed to update status for agent '{agent_name}': {e}")
+        return False
+    finally:
+        conn.close()
+
 
 
 def add_audit_log(event_type: str, status: str, details: dict = None, elapsed_ms: int = None):

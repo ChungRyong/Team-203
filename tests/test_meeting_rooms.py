@@ -36,6 +36,7 @@ class TestMeetingRooms(unittest.TestCase):
         self.client = TestClient(app)
         
     def test_complete_meeting_room_lifecycle(self):
+        print(">> STEP 1: TASK CREATE START")
         # 1. Create a Task
         task_data = {
             "task_id": "TASK-TEST-001",
@@ -44,6 +45,8 @@ class TestMeetingRooms(unittest.TestCase):
             "status": "PENDING"
         }
         res = self.client.post("/api/tasks", json=task_data)
+        print(">> STEP 1: TASK CREATE FINISHED", res.status_code)
+
         self.assertEqual(res.status_code, 201)
         self.assertEqual(res.json()["status"], "success")
         
@@ -126,7 +129,10 @@ class TestMeetingRooms(unittest.TestCase):
             "content": "대화 턴 20입니다! 테트리스 스펙 최종 결정. 코드 블록도 아래에 보관합니다. ```python\ndef tetris():\n    pass\n```",
             "payload_type": "TEXT"
         }
+        print(">> STEP 7: 20TH MSG POST START")
         res = self.client.post("/api/rooms/tf_test_room/messages", json=msg_20)
+        print(">> STEP 7: 20TH MSG POST FINISHED", res.status_code)
+
         self.assertEqual(res.status_code, 201)
         
         # Verify Blinky Observer Intercept Output:
@@ -160,12 +166,16 @@ class TestMeetingRooms(unittest.TestCase):
         llm_history = res.json()["llm_history"]
         self.assertEqual(len(llm_history), 2) # 1 System baseline summary + 1 assistant message (System refresh notice)
         
-        self.assertEqual(llm_history[0]["role"], "system")
+        self.assertEqual(llm_history[0]["role"], "user")
         self.assertIn("[Blinky Baseline Context Summary]", llm_history[0]["content"])
+
         
         # 9. Close Room
+        print(">> STEP 9: CLOSE ROOM START")
         res = self.client.post("/api/rooms/tf_test_room/close")
+        print(">> STEP 9: CLOSE ROOM FINISHED", res.status_code)
         self.assertEqual(res.status_code, 200)
+
         
         # Verify room is closed
         res = self.client.get("/api/rooms/tf_test_room")

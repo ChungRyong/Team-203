@@ -208,7 +208,7 @@
         /* Main Workspace Content Grid */
         .main-grid {
             display: grid;
-            grid-template-columns: 2fr 1.2fr;
+            grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
         }
 
@@ -217,6 +217,7 @@
                 grid-template-columns: 1fr;
             }
         }
+
 
         .card-title {
             font-size: 1.2rem;
@@ -627,7 +628,70 @@
 
         .toast.success { border-color: var(--success); }
         .toast.danger { border-color: var(--danger); }
+
+        /* Role badges */
+        .badge-role {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-role.primary { background: rgba(59, 130, 246, 0.15); color: var(--primary); }
+        .badge-role.success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .badge-role.warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-role.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .badge-role.cto-pardon { background: rgba(168, 85, 247, 0.15); color: #c084fc; } /* Purple for PM */
+
+        /* Agent State Badges */
+        .agent-status-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.35rem;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            text-transform: uppercase;
+        }
+        .agent-status-badge.idle {
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .agent-status-badge.running {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+            animation: pulse-running-border 1.5s infinite;
+        }
+        .agent-status-badge.penalized {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        @keyframes pulse-running-border {
+            0% { border-color: rgba(59, 130, 246, 0.3); }
+            50% { border-color: rgba(59, 130, 246, 0.8); }
+            100% { border-color: rgba(59, 130, 246, 0.3); }
+        }
+
+        /* Avatar glow adjustments */
+        .agent-avatar-glow.running {
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            animation: pulse-running-glow 1.5s infinite;
+        }
+        
+        @keyframes pulse-running-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
     </style>
+
 </head>
 <body>
 
@@ -784,9 +848,9 @@
 
         // Model Profile matching
         const AGENT_MODELS = {
-            'Hermes': 'Gemma-4-31B-JANG_4M-CRACK',
-            'Blinky': 'Gemma-4-31B-JANG_4M-CRACK',
-            'Blinky_Observer': 'Gemma-4-31B-JANG_4M-CRACK',
+            'Hermes': 'Qwen3.6-35B-A3B-8bit',
+            'Blinky': 'Qwen3.6-35B-A3B-8bit',
+            'Blinky_Observer': 'Qwen3.6-35B-A3B-8bit',
             'Concept-Agent': 'Qwen3.6-35B-A3B-8bit',
             'Art-Agent': 'Qwen3.6-35B-A3B-8bit',
             'Dev-Agent': 'Qwen3.6-35B-A3B-8bit',
@@ -1000,10 +1064,42 @@
                 return;
             }
 
+            // Sort agents: Hermes first, then others alphabetically
+            const sortedAgents = [...cachedAgents].sort((a, b) => {
+                if (a.agent_name === 'Hermes') return -1;
+                if (b.agent_name === 'Hermes') return 1;
+                return a.agent_name.localeCompare(b.agent_name);
+            });
+
             agentListContainer.innerHTML = '';
-            cachedAgents.forEach(agent => {
+            sortedAgents.forEach(agent => {
                 const modelName = AGENT_MODELS[agent.agent_name] || 'N/A';
                 const isPenalized = agent.is_penalized === 1;
+                const status = agent.status || 'IDLE';
+                
+                // Role Badge mapping
+                let roleBadge = '';
+                if (agent.agent_name === 'Hermes') {
+                    roleBadge = '<span class="badge-role cto-pardon">👑 수석 PM</span>';
+                } else if (agent.agent_name === 'Blinky' || agent.agent_name === 'Blinky_Observer') {
+                    roleBadge = '<span class="badge-role success">🛡️ 관제 위원</span>';
+                } else if (agent.agent_name === 'Concept-Agent') {
+                    roleBadge = '<span class="badge-role primary">📝 게임 기획</span>';
+                } else if (agent.agent_name === 'Art-Agent') {
+                    roleBadge = '<span class="badge-role warning">🎨 비주얼 아트</span>';
+                } else if (agent.agent_name === 'Dev-Agent') {
+                    roleBadge = '<span class="badge-role primary">💻 개발자</span>';
+                }
+
+                // Status Badge mapping
+                let statusBadge = '';
+                if (isPenalized) {
+                    statusBadge = '<span class="agent-status-badge penalized">🔴 PENALIZED</span>';
+                } else if (status === 'RUNNING') {
+                    statusBadge = '<span class="agent-status-badge running">⚡ RUNNING</span>';
+                } else {
+                    statusBadge = '<span class="agent-status-badge idle">🟢 IDLE</span>';
+                }
                 
                 // Warn dots representation
                 let dots = '';
@@ -1013,8 +1109,8 @@
                     dots += `<span class="warn-dot ${isActive ? 'active' : ''} ${isPenalized ? 'penalized' : ''}"></span>`;
                 }
 
-                // Show button if penalized or has warning
-                const showPardonBtn = isPenalized || agent.warning_count > 0;
+                // Show button if penalized or has warning (and not Hermes)
+                const showPardonBtn = (isPenalized || agent.warning_count > 0) && agent.agent_name !== 'Hermes';
                 const pardonBtnMarkup = showPardonBtn 
                     ? `<button class="btn-pardon" onclick="pardonAgent('${agent.agent_name}')">사면 (Pardon)</button>`
                     : '';
@@ -1022,12 +1118,18 @@
                 const agentCard = document.createElement('div');
                 agentCard.className = `agent-card ${isPenalized ? 'penalized' : ''}`;
                 
+                // Avatar glow based on status
+                let glowClass = 'agent-avatar-glow';
+                if (isPenalized) glowClass = 'agent-avatar-glow penalized';
+                else if (status === 'RUNNING') glowClass = 'agent-avatar-glow running';
+
                 agentCard.innerHTML = `
                     <div class="agent-header">
                         <div class="agent-name-group">
-                            <span class="agent-avatar-glow"></span>
+                            <span class="${glowClass}"></span>
                             <span class="agent-name">${agent.agent_name}</span>
-                            <span class="agent-model">${modelName}</span>
+                            ${roleBadge}
+                            ${statusBadge}
                         </div>
                         <div class="agent-warnings">
                             <span>경고 수:</span>
@@ -1038,12 +1140,16 @@
                         <div class="penalty-reason">
                             ${isPenalized ? `⚠️ 징계 적용 (온도 0.0 고정) 사유: ${agent.last_penalty_reason || '정적 검증 위반'}` : '🟢 정상 근무 상태 (Normal)'}
                         </div>
-                        ${pardonBtnMarkup}
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="agent-model">${modelName}</span>
+                            ${pardonBtnMarkup}
+                        </div>
                     </div>
                 `;
                 agentListContainer.appendChild(agentCard);
             });
         }
+
 
         // Set up Polling Loop and configuration
         function startPolling(ms) {

@@ -22,10 +22,76 @@ class VirtualStudioOrchestrator:
         self.room_id = room_id
         self.room_name = room_name
         self.allowed_agents = allowed_agents  # list, e.g. ["Concept-Agent", "Dev-Agent"]
+        self.server_process = None
         
     def log(self, message):
         print(f"👔 [PM Orchestrator] {message}")
         
+    def start_server_on_demand(self):
+        """
+        Dynamically starts the FastAPI server if it is not already running on port 8001.
+        """
+        # 1. Health check to see if server is already running
+        try:
+            res = requests.get(f"http://localhost:8001/api/config/cto-review", timeout=1)
+            if res.status_code == 200:
+                self.log("🟢 [On-Demand Server] FastAPI server is already running. Reusing existing instance.")
+                return True
+        except Exception:
+            pass
+            
+        # 2. Server is offline. Start uvicorn subprocess.
+        self.log("📡 [On-Demand Server] Dialogue server is offline. Starting backend server programmatically...")
+        
+        import sys
+        python_exe = sys.executable
+        cwd = os.path.dirname(os.path.abspath(__file__))
+        
+        cmd = [python_exe, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"]
+        env = os.environ.copy()
+        env["TEAM203_PORT"] = "8001"
+        
+        try:
+            self.server_process = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env
+            )
+            
+            # 3. Poll and wait until server is ready (max 5 seconds)
+            for _ in range(10):
+                time.sleep(0.5)
+                try:
+                    res = requests.get(f"http://localhost:8001/api/config/cto-review", timeout=1)
+                    if res.status_code == 200:
+                        self.log("🟢 [On-Demand Server] FastAPI server successfully launched and initialized.")
+                        return True
+                except Exception:
+                    pass
+            
+            self.log("⚠️ [On-Demand Server] Spawned server process but health check did not pass in time.")
+            return False
+        except Exception as e:
+            self.log(f"🚨 [On-Demand Server] Failed to launch server subprocess: {e}")
+            return False
+
+    def stop_server_on_demand(self):
+        """
+        Kills the spawned FastAPI server process to release local resources.
+        """
+        if self.server_process:
+            self.log("🔌 [On-Demand Server] Terminating FastAPI server process...")
+            self.server_process.terminate()
+            try:
+                self.server_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.server_process.kill()
+                self.server_process.wait()
+            self.log("🔌 [On-Demand Server] FastAPI server process safely shut down.")
+            self.server_process = None
+
     def call_api(self, method, endpoint, json_data=None):
         url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
         try:
@@ -39,6 +105,7 @@ class VirtualStudioOrchestrator:
         except Exception as e:
             self.log(f"🚨 API Connection Failed ({url}): {e}")
             return None
+
 
     def log_audit(self, event_type, status, details=None, elapsed_ms=None):
         """
@@ -460,10 +527,34 @@ class VirtualStudioOrchestrator:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 orchestrator.py <task_id>")
+        print("Usage: python3 orchestrator.py <task_id> | serve")
         sys.exit(0)
         
-    task_id = sys.argv[1]
+    action = sys.argv[1]
+    
+    if action.lower() == "serve":
+        orchestrator = VirtualStudioOrchestrator("SERVE_MODE", "serve_room", "Dashboard Viewer Room", [])
+        orchestrator.log("👔 Chief PM Hermes is launching the dialogue server on-demand...")
+        if not orchestrator.start_server_on_demand():
+            orchestrator.log("🚨 Failed to start dialogue server.")
+            sys.exit(1)
+            
+        orchestrator.log("🟢 Dialogue server is running at http://localhost:8001")
+        orchestrator.log("📊 You can now access the dashboard at file:///Users/jabiseu/Documents/workspace/Team-203/workspace/shared/dashboard.html")
+        orchestrator.log("⌨️  Press Enter to stop the server and release all resources...")
+        
+        try:
+            input()
+        except KeyboardInterrupt:
+            print()
+            pass
+            
+        orchestrator.log("🔌 Shutting down the dialogue server...")
+        orchestrator.stop_server_on_demand()
+        orchestrator.log("🛑 Dialogue server stopped successfully.")
+        sys.exit(0)
+        
+    task_id = action
     
     # Instance Configuration representing dynamic sequential Tetris development
     room_id = f"tf_tetris_{task_id.replace('-', '_').lower()}"
@@ -472,10 +563,16 @@ def main():
     
     orchestrator = VirtualStudioOrchestrator(task_id, room_id, room_name, allowed_agents)
     
+    # 0. Start dialogue server dynamically if offline
+    if not orchestrator.start_server_on_demand():
+        orchestrator.log("🚨 Failed to initialize dialog server backend. Aborting run.")
+        sys.exit(1)
+        
     # 1. Initialize
     title = "테트리스 게임 기본 기능 개발"
     description = "Godot 4.2+ GDScript stable 규격에 부합하는 테트리스 웹 게임 프로토타입 작성"
     orchestrator.initialize_studio(title, description)
+
     
     # 2. Concept-Agent 기획서 작성 Turn (직렬 구동: Dev-Agent는 VRAM 언로드)
     orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # ensure clean VRAM
@@ -486,8 +583,8 @@ def main():
     )
     concept_output = orchestrator.run_agent_turn("Concept-Agent", concept_prompt, "Qwen3.6-35B-A3B-8bit")
     orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # unload to clear cache
-    
-    # 3. Art-Agent 디자인 시안 및 에셋 프롬프트 도출 Turn
+
+    # 3. Art-Agent 디자인 시안 및 에셋 프롬프트 도출 Turn (Flux.1 Dev FP8 is image model, not LLM)
     orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # ensure clean VRAM
     art_prompt = (
         "당신은 Team-203의 테크니컬 아티스트 Art-Agent입니다.\n"
@@ -558,6 +655,10 @@ def main():
         f"- **GUT QA 결과:** {qa_status} 완료."
     )
     orchestrator.finalize_studio(milestone_summary)
+    
+    # 7. Clean up on-demand server
+    orchestrator.stop_server_on_demand()
 
 if __name__ == "__main__":
     main()
+

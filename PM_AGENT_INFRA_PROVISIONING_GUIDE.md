@@ -1,7 +1,7 @@
 # 🤖 PM 에이전트 자율 백엔드 및 AI 인프라 프로비저닝 가이드 (PM_AGENT_INFRA_PROVISIONING_GUIDE)
 
 > [!NOTE]
-> **수신인:** 수석 PM 에이전트 `Hermes` (Gemma 4 31B MLX)
+> **수신인:** 수석 PM 에이전트 `Hermes` (Qwen3.6-35B-A3B-8bit)
 > **목적:** M5 Pro Max 로컬 시스템에서 자율적으로 인프라를 구축하고 가동하는 표준 실무 매뉴얼.
 
 ---
@@ -35,7 +35,7 @@ graph TD
 ### [2단계] Ollama 설치 및 MLX 정예 편대 다운로드
 1. **Ollama 설치:** `brew install --cask ollama`
 2. **데몬 기동 폴링:** `open -a Ollama` 후 `http://127.0.0.1:11434/api/tags` 응답이 올 때까지 최대 30초간 루프로 대기하십시오.
-3. **모델 풀링 (Fail-Safe):** `ollama pull qwen3.6:35b-mlx || ollama pull qwen2.5:32b` 및 `ollama pull gemma4:31b-mlx || ollama pull gemma2:27b` 순으로 적재하십시오. (용량이 크므로 백그라운드 실행 권장)
+3. **모델 풀링 (Fail-Safe):** `ollama pull Qwen3.6-35B-A3B-8bit` 또는 `ollama pull qwen3.6:35b-mlx` 를 적재하십시오. (용량이 크므로 백그라운드 실행 권장)
 
 ### [3단계] ComfyUI 격리 환경 구축 (Python v3.13 강제)
 **중요:** 시스템 기본 Python(v3.9 등)과 충돌하여 `av`나 `torch` 설치 실패가 빈번합니다. 반드시 명시적 버전을 사용하십시오.

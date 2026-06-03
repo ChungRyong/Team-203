@@ -25,6 +25,11 @@
 - [ ] **[sed 취약점 해결]** `.env` 정보 주입 시 특수문자 깨짐 및 취약점이 있는 `sed` 대신 파이썬 원라인(`python3 -c`) 안전 치환 엔진으로 교체
 
 ## 🔄 4. 👥 이중 워크스페이스 동기화 및 깃 버전 관리
+- [x] Shut down the FastAPI background server and clean up active processes
+- [x] Build dynamic Web Dashboard (`workspace/shared/dashboard.html`) and expose GET APIs
+- [x] Fix gitignore rules for ComfyUI and temporary files
+- [x] Optimize unit testing runtime (implement bypass for git & LLM calls, reducing run time from ~350s to ~3s)
+- [x] Relaunch FastAPI backend dialog server on port 8001
 - [ ] Secondary Workspace (`/Users/jabiseu/Documents/workspace/Team-203`)의 모든 수정 파일 Parity 동기화
 - [ ] 로컬 작업 내역 스테이징 및 Git 로컬 커밋 생성 (Git Push는 대표님 지시 시에만 수행)
 - [ ] `walkthrough.md` 작성 및 최종 완료 보고

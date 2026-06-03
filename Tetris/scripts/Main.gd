@@ -45,19 +45,26 @@ func setup_managers():
 	# Store haptic manager globally/locally for access
 	self.set('haptic_manager', haptic_manager)
 	
-	print("[Main] All managers linked and active. Haptics & Visuals enabled.")
+	# IMPORTANT: Spawn the first piece to start the game!
+	piece_manager.spawn_piece()
+	
+	print("[Main] All managers linked, first piece spawned. Haptics & Visuals enabled.")
 
 
 ## The main logic loop
 func _process(_delta):
+	print("[SENSE] Main loop ticking...")
 	if game_manager.current_state != GameManager.GameState.PLAYING:
+		print("[SENSE] Loop blocked by state: ", game_manager.current_state)
 		return
 	
 	handle_user_input()
 	
-	# 6. Visual Sync: Update the 3D view every frame
 	if visual_orchestrator:
+		print("[SENSE] VisualOrchestrator exists. Calling redraw_board()...")
 		visual_orchestrator.redraw_board()
+	else:
+		print("[SENSE] VisualOrchestrator is MISSING!")
 
 func handle_user_input():
 	# 1. Lateral Movement (Left/Right)

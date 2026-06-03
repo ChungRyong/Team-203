@@ -1,4 +1,4 @@
-extends Node
+extends Node3D
 
 ## VisualOrchestrator.gd
 ## Handles the "Modern 3D" visual representation using Godot's 3D primitives.
@@ -43,6 +43,7 @@ func setup_visuals():
 
 ## Updates the visual display based on logic state
 func redraw_board():
+	print("[Visuals] REDRAW START: Updating la-piece and grid visuals...")
 	# 1. Redraw Static Grid
 	for y in range(GridManager.HEIGHT):
 		for x in range(GridManager.WIDTH):
@@ -60,6 +61,7 @@ func redraw_board():
 
 	# 2. Redraw Active Piece
 	update_active_piece_visuals()
+	print("[Visuals] REDRAW COMPLETE: Current active cells count: ", piece_manager.active_cells.size())
 
 func create_block_mesh(x, y, key):
 	var mesh_instance = MeshInstance3D.new()
