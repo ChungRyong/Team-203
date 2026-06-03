@@ -16,9 +16,7 @@ enum CellState { EMPTY, OCCUPIED }
 var grid = []
 
 func _ready():
-	print("[GridManager] Initializing logical board...")
 	setup_grid()
-	debug_print_grid() # TDD Verification on startup
 
 ## Initialize the grid with EMPTY cells
 func setup_grid():
@@ -28,14 +26,13 @@ func setup_grid():
 		for x in range(WIDTH):
 			row.append(CellState.EMPTY)
 		grid.append(row)
-	print("[GridManager] Grid initialized: 10x20 cells.")
 
 ## Check if a cell is within boundaries and empty
 func is_cell_empty(x: int, y: int) -> bool:
 	# Boundary check first (Prevent index out of bounds)
 	if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:
 		return false # Out of bounds is considered 'not empty' (blocking)
-	
+
 	return grid[y][x] == CellState.EMPTY
 
 ## Set a cell to OCCUPIED or EMPTY
@@ -48,14 +45,13 @@ func set_cell(x: int, y: int, state: CellState):
 ## Clear the entire board
 func clear_grid():
 	setup_grid()
-	print("[GridManager] Grid cleared.")
 
 ## Check for full lines and remove them
 ## Returns the number of lines cleared
 func check_and_clear_lines() -> int:
 	var lines_cleared = 0
 	var rows_to_remove = []
-	
+
 	# 1. Identify all full lines (from bottom up)
 	for y in range(HEIGHT - 1, -1, -1):
 		var is_full = true
@@ -65,9 +61,9 @@ func check_and_clear_lines() -> int:
 				break
 		if is_full:
 			rows_to_remove.append(y)
-	
+
 	lines_cleared = rows_to_remove.size()
-	
+
 	# 2. Remove lines and shift everything above down
 	for row_index in rows_to_remove:
 		# Shift all rows above this one down by 1
@@ -78,21 +74,4 @@ func check_and_clear_lines() -> int:
 		for x in range(WIDTH):
 			grid[0].append(CellState.EMPTY)
 
-	if lines_cleared > 0:
-		print("[GridManager] Cleared ", lines_cleared, " line(s)!")
-		debug_print_grid()
-		
 	return lines_cleared
-
-
-## TDD Helper: Print grid to console for visual verification
-func debug_print_grid():
-	print("\n--- CURRENT GRID STATE ---")
-	var output = ""
-	for y in range(HEIGHT):
-		var row_str = ""
-		for x in range(WIDTH):
-			row_str += "." if grid[y][x] == CellState.EMPTY else "#"
-		output += row_str + "\n"
-	print(output)
-	print("--------------------------\n")
