@@ -10,11 +10,12 @@ var _bag_index: int = 0
 var _peek_buffer: PackedStringArray = PackedStringArray()
 var _peek_index: int = 0
 
+
 func _init() -> void:
 	refresh_bag()
 
 
-func shuffle(arr: PackedStringArray) -> PackedStringArray:
+func _shuffle(arr: PackedStringArray) -> PackedStringArray:
 	var result := PackedStringArray(arr)
 	for i in range(result.size() - 1, 0, -1):
 		var j := randi() % (i + 1)
@@ -26,7 +27,7 @@ func shuffle(arr: PackedStringArray) -> PackedStringArray:
 
 func refresh_bag() -> void:
 	var full_bag := PackedStringArray(PIECE_TYPES)
-	_bag = shuffle(full_bag)
+	_bag = _shuffle(full_bag)
 	_bag_index = 0
 
 
@@ -70,6 +71,6 @@ func _refresh_peek_buffer() -> void:
 		_bag.append(_peek_buffer[_peek_index])
 		_peek_index += 1
 
-	_refresh_bag()
+	refresh_bag()
 	_peek_buffer = PackedStringArray()
 	_peek_index = 0

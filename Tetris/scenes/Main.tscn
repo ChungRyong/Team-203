@@ -217,6 +217,3 @@ script = ExtResource("2_visual")
 
 [node name="Ghost" type="Node" parent="Game3D"]
 script = ExtResource("3_ghost")
-
-[renderer]
-configs three layers

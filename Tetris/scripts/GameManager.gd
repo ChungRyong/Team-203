@@ -1,22 +1,21 @@
 extends Node
 
-## GameManager.gd - Game state, timing, and scoring for Team-203 Tetris.
-
 class_name GameManager
 
 signal game_over_signal(final_score: int, max_lines: int, total_lines: int)
 
 enum GameState { START, PLAYING, PAUSED, GAME_OVER }
 
-var current_state = GameState.START
-var current_level = 1
-var score = 0
+var current_state: int = GameState.START
+var current_level: int = 1
+var score: int = 0
 
-var base_drop_interval = 1.0
-var drop_interval_multiplier = 0.8
-var current_drop_interval = 1.0
+var base_drop_interval: float = 1.0
+var drop_interval_multiplier: float = 0.8
+var current_drop_interval: float = 1.0
 
 var game_timer: Timer
+
 
 func _ready():
 	setup_timer()
@@ -43,7 +42,7 @@ func update_level(new_level: int):
 
 
 func add_score(lines: int, total_lines: int):
-	var points = 0
+	var points: int = 0
 	match lines:
 		1: points = 100
 		2: points = 300
@@ -53,7 +52,7 @@ func add_score(lines: int, total_lines: int):
 
 	score += points * current_level
 
-	var new_level = (total_lines // 10) + 1
+	var new_level: int = (total_lines // 10) + 1
 	if new_level > current_level:
 		update_level(new_level)
 
