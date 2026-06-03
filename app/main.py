@@ -19,7 +19,7 @@ from app import database
 from app.database import run_git_snapshot
 from app.blinky_middleware import check_and_compress_context
 from app.penalties import enforce_penalty_check, get_agent_system_prompt, enforce_pardon_agent
-from config.settings import OLLAMA_CHAT_URL
+# No import of OLLAMA_CHAT_URL needed for oMLX
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -347,35 +347,14 @@ def close_meeting_room(room_id: str):
 @app.post("/api/vram/unload")
 def unload_vram(req: VramUnloadRequest):
     """
-    Instructs the local Ollama instance to unload a model from memory (VRAM).
-    Sends a POST request to Ollama's API with keep_alive set to 0.
+    oMLX automatically manages VRAM caching and eviction via TTL and LRU policies.
+    Bypasses explicit unload requests from orchestrators to preserve engine stability.
     """
-    import requests
-    ollama_chat_url = OLLAMA_CHAT_URL
-    payload = {
+    return {
+        "status": "success",
         "model": req.model,
-        "messages": [],
-        "keep_alive": 0
+        "message": f"oMLX automatically manages VRAM. Model '{req.model}' unload bypassed."
     }
-    
-    try:
-        # Send keep_alive = 0 to Ollama API to force release
-        # Short timeout to avoid blocking if Ollama is unresponsive
-        res = requests.post(ollama_chat_url, json=payload, timeout=5)
-        return {
-            "status": "success",
-            "model": req.model,
-            "message": f"Successfully requested Ollama to unload model '{req.model}'.",
-            "ollama_status_code": res.status_code
-        }
-    except Exception as e:
-        # Return success with fallback/warning message so it remains robust (Fail-Safe)
-        return {
-            "status": "warning",
-            "model": req.model,
-            "message": f"Ollama connection bypassed or offline. Model '{req.model}' unload requested.",
-            "error_detail": str(e)
-        }
 
 @app.post("/api/agents/{agent_name}/penalize")
 def penalize_agent(agent_name: str, req: PenalizeRequest):

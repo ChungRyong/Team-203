@@ -93,7 +93,7 @@ class TestCtoReview(unittest.TestCase):
             
         # Verify that it updated the task status to PASSED_WITHOUT_CLAUDE
         mock_patch.assert_called_with(
-            "http://localhost:8000/api/tasks/TASK-123", # or port env
+            "http://localhost:8001/api/tasks/TASK-123", # or port env
             json={"status": "PASSED_WITHOUT_CLAUDE"},
             timeout=5
         )

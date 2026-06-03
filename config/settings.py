@@ -29,10 +29,10 @@ def get_config(key, default):
     return os.environ.get(key) or env_data.get(key) or default
 
 # Core Config Values
-PORT = int(get_config("TEAM203_PORT", "8000"))
-OLLAMA_API_URL = get_config("OLLAMA_API_URL", "http://localhost:11434")
+PORT = int(get_config("TEAM203_PORT", "8001"))
+OMLX_API_URL = get_config("OMLX_API_URL", "http://localhost:8000")
+OMLX_API_KEY = get_config("OMLX_API_KEY", "Team-203")
 DISCORD_WEBHOOK_URL = get_config("DISCORD_WEBHOOK_URL", "")
 
 # Derived Endpoint URLs
-OLLAMA_GENERATE_URL = f"{OLLAMA_API_URL.rstrip('/')}/api/generate"
-OLLAMA_CHAT_URL = f"{OLLAMA_API_URL.rstrip('/')}/api/chat"
+OMLX_CHAT_URL = f"{OMLX_API_URL.rstrip('/')}/v1/chat/completions"

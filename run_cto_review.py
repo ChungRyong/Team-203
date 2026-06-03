@@ -58,7 +58,7 @@ def check_asset_violations(filepath, registered_assets):
     return violations
 
 # Use environment variable to toggle base URL or fallback to standard port
-PORT = os.environ.get("TEAM203_PORT", "8000")
+PORT = os.environ.get("TEAM203_PORT", "8001")
 API_URL_PENALIZE = f"http://localhost:{PORT}/api/agents/Dev-Agent/penalize"
 API_URL_TASKS = f"http://localhost:{PORT}/api/tasks"
 API_URL_CONFIG = f"http://localhost:{PORT}/api/config/cto-review"

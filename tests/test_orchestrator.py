@@ -88,11 +88,11 @@ class TestOrchestrator(unittest.TestCase):
         mock_res.status_code = 200
         mock_post.return_value = mock_res
 
-        self.orchestrator.unload_agent_vram("qwen3.6:35b-mlx")
+        self.orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit")
         
         mock_post.assert_called_once_with(
             f"{API_BASE_URL}/vram/unload",
-            json={"model": "qwen3.6:35b-mlx"},
+            json={"model": "Qwen3.6-35B-A3B-8bit"},
             timeout=10
         )
 
@@ -123,16 +123,16 @@ class TestOrchestrator(unittest.TestCase):
                 }
             elif "/messages" in url:
                 res.status_code = 201
-            elif "api/chat" in url:
+            elif "v1/chat/completions" in url:
                 res.status_code = 200
                 res.json.return_value = {
-                    "message": {"content": "Generated game concept"}
+                    "choices": [{"message": {"content": "Generated game concept"}}]
                 }
             return res
         mock_post.side_effect = mock_post_side_effect
 
         response_text = self.orchestrator.run_agent_turn(
-            "Concept-Agent", "base_prompt", "qwen3.6:35b-mlx"
+            "Concept-Agent", "base_prompt", "Qwen3.6-35B-A3B-8bit"
         )
         
         self.assertEqual(response_text, "Generated game concept")
@@ -171,16 +171,16 @@ class TestOrchestrator(unittest.TestCase):
                 }
             elif "/messages" in url:
                 res.status_code = 201
-            elif "api/chat" in url:
+            elif "v1/chat/completions" in url:
                 res.status_code = 200
                 res.json.return_value = {
-                    "message": {"content": "Penalized strictly correct response"}
+                    "choices": [{"message": {"content": "Penalized strictly correct response"}}]
                 }
             return res
         mock_post.side_effect = mock_post_side_effect
 
         response_text = self.orchestrator.run_agent_turn(
-            "Dev-Agent", "base_prompt", "gemma4:31b-mlx"
+            "Dev-Agent", "base_prompt", "Gemma-4-31B-JANG_4M-CRACK"
         )
         self.assertEqual(response_text, "Penalized strictly correct response")
 

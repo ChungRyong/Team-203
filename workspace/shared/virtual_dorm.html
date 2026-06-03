@@ -395,7 +395,7 @@
         async function fetchLiveStats() {
             try {
                 // 1. 에이전트 및 태스크 통계 조회
-                const taskRes = await fetch('http://localhost:8000/api/tasks');
+                const taskRes = await fetch('http://localhost:8001/api/tasks');
                 if (taskRes.ok) {
                     const tasks = await taskRes.json();
                     globalStats.totalTasks = tasks.length;
@@ -403,7 +403,7 @@
                 }
 
                 // 2. 사내 종합 건강 지표 및 징계 여부 조회
-                const auditRes = await fetch('http://localhost:8000/api/audit/summary');
+                const auditRes = await fetch('http://localhost:8001/api/audit/summary');
                 if (auditRes.ok) {
                     const audit = await auditRes.json();
                     globalStats.officeHealthIndex = Math.round(audit.office_health_index);

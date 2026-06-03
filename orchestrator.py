@@ -5,7 +5,7 @@ import json
 import requests
 import subprocess
 import time
-from config.settings import PORT, OLLAMA_CHAT_URL, DISCORD_WEBHOOK_URL
+from config.settings import PORT, OMLX_CHAT_URL, OMLX_API_KEY, DISCORD_WEBHOOK_URL
 from app.discord_relay import send_discord_log
 
 # Central API URL resolution from unified settings
@@ -181,28 +181,29 @@ class VirtualStudioOrchestrator:
         # Combine system prompt with LLM dialogue baseline history
         messages = [{"role": "system", "content": system_prompt}] + llm_history
         
-        # 3. Direct HTTP call to Ollama Local 추론 API
+        # 3. Direct HTTP call to oMLX Local 추론 API (OpenAI-compatible)
         self.log(f"💬 Prompting local model '{model_name}' (Temperature: {temperature})...")
-        ollama_payload = {
+        omlx_payload = {
             "model": model_name,
             "messages": messages,
-            "stream": False,
-            "options": {
-                "temperature": temperature
-            }
+            "temperature": temperature
+        }
+        headers = {
+            "Authorization": f"Bearer {OMLX_API_KEY}",
+            "Content-Type": "application/json"
         }
         
         agent_response_text = ""
         try:
-            ollama_res = requests.post(OLLAMA_CHAT_URL, json=ollama_payload, timeout=40)
-            if ollama_res.status_code == 200:
-                agent_response_text = ollama_res.json().get("message", {}).get("content", "").strip()
+            omlx_res = requests.post(OMLX_CHAT_URL, json=omlx_payload, headers=headers, timeout=60)
+            if omlx_res.status_code == 200:
+                agent_response_text = omlx_res.json()["choices"][0]["message"]["content"].strip()
             else:
-                self.log(f"⚠️ Ollama returned status error {ollama_res.status_code}. Activating mock fallback dialogue...")
-                agent_response_text = f"[{agent_name} Fallback Response] Ollama API가 불안정합니다. 태스크를 지속 진행하기 위해 로컬 백업 로직을 구동합니다."
+                self.log(f"⚠️ oMLX returned status error {omlx_res.status_code}. Activating mock fallback dialogue...")
+                agent_response_text = f"[{agent_name} Fallback Response] oMLX API가 불안정합니다. 태스크를 지속 진행하기 위해 로컬 백업 로직을 구동합니다."
         except Exception as e:
-            self.log(f"⚠️ Connection to Ollama failed: {e}. Activating mock fallback dialogue...")
-            agent_response_text = f"[{agent_name} Fallback Response] 로컬 추론 포트(11434) 오프라인 상태입니다. 무중단 검증 모드로 자동 진행합니다."
+            self.log(f"⚠️ Connection to oMLX failed: {e}. Activating mock fallback dialogue...")
+            agent_response_text = f"[{agent_name} Fallback Response] 로컬 추론 포트 오프라인 상태입니다. 무중단 검증 모드로 자동 진행합니다."
             
         # 4. Post agent response to room messages (Triggering Blinky Turn middleware automatically inside FastAPI)
         post_payload = {
@@ -477,24 +478,24 @@ def main():
     orchestrator.initialize_studio(title, description)
     
     # 2. Concept-Agent 기획서 작성 Turn (직렬 구동: Dev-Agent는 VRAM 언로드)
-    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # ensure clean VRAM
+    orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # ensure clean VRAM
     concept_prompt = (
         "당신은 Team-203의 시니어 기획자 Concept-Agent입니다.\n"
         "추상적 게임 규칙을 Godot 4.2+ GDScript에 최적화된 명확한 예외처리와 논리로 변형하십시오.\n"
         "모든 명세에는 기획 테이블과 JSON 스키마를 수록하고, 가상의 사양을 날조하지 마십시오."
     )
-    concept_output = orchestrator.run_agent_turn("Concept-Agent", concept_prompt, "qwen3.6:35b-mlx")
-    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload to clear cache
+    concept_output = orchestrator.run_agent_turn("Concept-Agent", concept_prompt, "Qwen3.6-35B-A3B-8bit")
+    orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # unload to clear cache
     
     # 3. Art-Agent 디자인 시안 및 에셋 프롬프트 도출 Turn
-    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # ensure clean VRAM
+    orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # ensure clean VRAM
     art_prompt = (
         "당신은 Team-203의 테크니컬 아티스트 Art-Agent입니다.\n"
         "시니어 기획자의 명세서를 기반으로, ComfyUI API(Flux.1)를 구동하여 완벽한 와이어프레임과 UI/UX 에셋을 그리기 위한 정밀한 영문 이미지 생성 프롬프트를 1줄의 텍스트로 도출하십시오.\n"
         "가상의 아티스틱 효과를 날조하지 마십시오."
     )
-    art_output_prompt = orchestrator.run_agent_turn("Art-Agent", art_prompt, "qwen3.6:35b-mlx")
-    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload to clear cache before ComfyUI
+    art_output_prompt = orchestrator.run_agent_turn("Art-Agent", art_prompt, "Qwen3.6-35B-A3B-8bit")
+    orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # unload to clear cache before ComfyUI
     
     # ComfyUI 이미지 생성 API 연동 실행
     orchestrator.log("🎨 [Art Generator] Triggering ComfyUI /api/art/generate pipeline...")
@@ -519,8 +520,8 @@ def main():
         "시니어 기획자의 명세서를 기반으로, 오직 Godot 4.2+에 부합하는 완벽한 작동 가능 GDScript 코드만 작성하십시오.\n"
         "CTO의 PR 통과를 위해, 함수는 주석/공백 제외 50줄 이하여야 하며 가상 함수 날조를 절대 금지합니다."
     )
-    dev_output = orchestrator.run_agent_turn("Dev-Agent", dev_prompt, "qwen3.6:35b-mlx")
-    orchestrator.unload_agent_vram("qwen3.6:35b-mlx") # unload after dev coding
+    dev_output = orchestrator.run_agent_turn("Dev-Agent", dev_prompt, "Qwen3.6-35B-A3B-8bit")
+    orchestrator.unload_agent_vram("Qwen3.6-35B-A3B-8bit") # unload after dev coding
     
     # GUT 게임 QA 1단계 자동화 검증 기동
     qa_status = orchestrator.execute_qa_audit_stage(

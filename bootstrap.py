@@ -39,8 +39,9 @@ def resolve_keychain_secrets():
             lines = f.readlines()
     else:
         lines = [
-            "PORT=8000\n",
-            "OLLAMA_CHAT_URL=http://localhost:11434/api/chat\n",
+            "TEAM203_PORT=8001\n",
+            "OMLX_API_URL=http://localhost:8000\n",
+            "OMLX_API_KEY=Team-203\n",
             "DISCORD_WEBHOOK_URL=\n",
             "HF_TOKEN=\n"
         ]

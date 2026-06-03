@@ -10,13 +10,13 @@ from app.database import (
 )
 from app.discord_relay import send_discord_log
 
-from config.settings import OLLAMA_GENERATE_URL
-MODEL_NAME = "gemma4:31b-mlx"
+from config.settings import OMLX_CHAT_URL, OMLX_API_KEY
+MODEL_NAME = "Gemma-4-31B-JANG_4M-CRACK"
 
 def call_blinky_summarizer(transcript_str):
     """
-    Call Ollama local Gemma 4B model to summarize the meeting room transcript.
-    Includes a highly robust fallback in case Ollama is offline or model is missing.
+    Call oMLX local Gemma-4-31B-JANG_4M-CRACK model via OpenAI-compatible chat API to summarize.
+    Includes a highly robust fallback in case oMLX is offline or model is missing.
     """
     system_prompt = (
         "You are Blinky, the efficient IO Operations Assistant of Team-203.\n"
@@ -26,28 +26,32 @@ def call_blinky_summarizer(transcript_str):
         "Provide ONLY the final concise Markdown summary without any introductory or conversational text."
     )
     
-    prompt = f"{system_prompt}\n\nConversation Transcript:\n---\n{transcript_str}\n---\nMarkdown Summary:"
+    prompt = f"Conversation Transcript:\n---\n{transcript_str}\n---\nMarkdown Summary:"
     
     payload = {
         "model": MODEL_NAME,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.3
-        }
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3
+    }
+    headers = {
+        "Authorization": f"Bearer {OMLX_API_KEY}",
+        "Content-Type": "application/json"
     }
     
     try:
-        response = requests.post(OLLAMA_GENERATE_URL, json=payload, timeout=20)
+        response = requests.post(OMLX_CHAT_URL, json=payload, headers=headers, timeout=30)
         if response.status_code == 200:
             result = response.json()
-            return result.get("response", "").strip()
+            return result["choices"][0]["message"]["content"].strip()
         else:
-            print(f"⚠️ Blinky Ollama API returned error status: {response.status_code}")
+            print(f"⚠️ Blinky oMLX API returned error status: {response.status_code}")
     except Exception as e:
-        print(f"⚠️ Blinky summarizer connection to Ollama failed: {e}")
+        print(f"⚠️ Blinky summarizer connection to oMLX failed: {e}")
         
-    # Robust Fallback in case of Ollama offline/failure
+    # Robust Fallback in case of oMLX offline/failure
     print("🔄 Running automated rule-based fallback summarization...")
     return generate_fallback_summary(transcript_str)
 
