@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 [TEAM-203] SYSTEM MONITORING DASHBOARD</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #0d0e12;
+            --card-bg: rgba(22, 25, 35, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;      /* Neon Blue */
+            --success: #10b981;      /* Neon Green */
+            --warning: #f59e0b;      /* Neon Orange */
+            --danger: #ef4444;       /* Neon Red */
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --glow-success: rgba(16, 185, 129, 0.2);
+            --glow-danger: rgba(239, 68, 68, 0.25);
+            --glow-primary: rgba(59, 130, 246, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 2rem;
+        }
+
+        /* Container Layout */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .header-title-section h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-title-section p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .refresh-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+        }
+
+        .refresh-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .refresh-group select {
+            background: transparent;
+            color: var(--text-main);
+            border: none;
+            outline: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .refresh-group select option {
+            background: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        .btn-refresh {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px var(--glow-primary);
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+
+        .btn-refresh:active {
+            transform: translateY(1px);
+        }
+
+        .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Top Summary Widgets */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .stat-card.success::before { background: var(--success); }
+        .stat-card.warning::before { background: var(--warning); }
+        .stat-card.danger::before { background: var(--danger); }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: baseline;
+            gap: 0.25rem;
+        }
+
+        .stat-value span.unit {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .stat-description {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Main Workspace Content Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .badge-count {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Tasks & Project Plan Widget */
+        .project-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        /* Scrollbar styles */
+        .task-list::-webkit-scrollbar, .agent-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .task-list::-webkit-scrollbar-thumb, .agent-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .task-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .task-card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .task-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .task-status.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .task-status.in_progress {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .task-status.completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .task-status.passed_without_claude {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .task-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-plan {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 0.75rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Room Phase Info inside Task */
+        .room-phase-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+        }
+
+        .room-phase-indicator.closed {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+
+        .phase-pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        .phase-pulse.closed {
+            background-color: var(--text-muted);
+            box-shadow: none;
+            animation: none;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Agent Workforce Status Card */
+        .agents-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .agent-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .agent-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .agent-card:hover {
+            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .agent-card.penalized {
+            border-color: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 10px var(--glow-danger);
+            background: rgba(239, 68, 68, 0.02);
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .agent-name-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .agent-avatar-glow {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .agent-card.penalized .agent-avatar-glow {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+            animation: pulse-danger-glow 1.5s infinite;
+        }
+
+        @keyframes pulse-danger-glow {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .agent-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .agent-model {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--primary);
+            background: rgba(59, 130, 246, 0.08);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .agent-warnings {
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .warn-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .warn-dot.active {
+            background-color: var(--warning);
+            box-shadow: 0 0 6px var(--warning);
+        }
+
+        .warn-dot.active.penalized {
+            background-color: var(--danger);
+            box-shadow: 0 0 6px var(--danger);
+        }
+
+        .agent-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        .penalty-reason {
+            font-size: 0.75rem;
+            color: var(--danger);
+            font-style: italic;
+            max-width: 65%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-pardon {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-pardon:hover {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 0 10px var(--glow-success);
+        }
+
+        /* Audit Telemetry Section */
+        .audit-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .telemetry-item {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .telemetry-header {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .telemetry-value-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .progress-track {
+            flex-grow: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-bar.success { background: var(--success); }
+        .progress-bar.warning { background: var(--warning); }
+        .progress-bar.danger { background: var(--danger); }
+
+        .telemetry-number {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 45px;
+            text-align: right;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1e293b;
+            border: 1px solid var(--primary);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            color: var(--text-main);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast.success { border-color: var(--success); }
+        .toast.danger { border-color: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <!-- Header -->
+        <header>
+            <div class="header-title-section">
+                <h1>📊 TEAM-203 SYSTEM MONITOR</h1>
+                <p>로컬 멀티 에이전트 가상 스튜디오 대시보드</p>
+            </div>
+            
+            <div class="header-controls">
+                <div class="refresh-group">
+                    <label for="pollingInterval">자동 갱신 주기:</label>
+                    <select id="pollingInterval">
+                        <option value="0">정지 (Off)</option>
+                        <option value="3000" selected>3초</option>
+                        <option value="5000">5초</option>
+                        <option value="10000">10초</option>
+                        <option value="30000">30초</option>
+                    </select>
+                </div>
+                
+                <button class="btn-refresh" id="btnManualRefresh">즉시 갱신</button>
+                <div class="last-updated" id="lastUpdatedVal">Last updated: --:--:--</div>
+            </div>
+        </header>
+
+        <!-- Stats Overview Widgets -->
+        <div class="stats-grid">
+            <div class="stat-card" id="cardOhi">
+                <div class="stat-label">Office Health Index (OHI)</div>
+                <div class="stat-value" id="ohiVal">100<span class="unit">%</span></div>
+                <div class="stat-description">사내 기강, 검증 통과율 종합 평가 지표</div>
+            </div>
+            <div class="stat-card success" id="cardTasks">
+                <div class="stat-label">Tasks Finished</div>
+                <div class="stat-value" id="taskStatsVal">0/0</div>
+                <div class="stat-description">마일스톤 태스크 완료 진행도</div>
+            </div>
+            <div class="stat-card warning" id="cardRooms">
+                <div class="stat-label">Active TF Rooms</div>
+                <div class="stat-value" id="activeRoomsVal">0</div>
+                <div class="stat-description">현재 기획/개발 협업 회의실 수</div>
+            </div>
+            <div class="stat-card" id="cardServer">
+                <div class="stat-label">FastAPI Backend Port</div>
+                <div class="stat-value">8001</div>
+                <div class="stat-description">🟢 Active & serving requests</div>
+            </div>
+        </div>
+
+        <!-- Main Body Grid -->
+        <div class="main-grid">
+            
+            <!-- Project Tasks (Plan & Phase) -->
+            <div class="project-section">
+                <div class="card-title">
+                    <span>📌 진행 중 작업 및 마스터플랜 (Plan & Phase)</span>
+                    <span class="badge-count" id="taskCountVal">0 Tasks</span>
+                </div>
+                
+                <div class="task-list" id="taskListContainer">
+                    <!-- Dynamic rendering -->
+                    <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem;">
+                        서버에서 태스크 목록을 읽어오는 중...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Workforce Profiles -->
+            <div class="agents-section">
+                <div class="card-title">
+                    <span>🤖 에이전트 인력 현황 및 징계 정보</span>
+                    <span class="badge-count" id="agentCountVal">0 Agents</span>
+                </div>
+                
+                <div class="agent-container" id="agentListContainer">
+                    <!-- Dynamic rendering -->
+                    <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem;">
+                        에이전트 정보를 스캔하는 중...
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Audit Telemetry -->
+        <div class="audit-section">
+            <div class="card-title">
+                <span>🛡️ 시스템 감사 텔레메트리 (Audit Telemetry)</span>
+            </div>
+            
+            <div class="telemetry-grid">
+                <div class="telemetry-item">
+                    <div class="telemetry-header">VRAM Cache Health</div>
+                    <div class="telemetry-value-bar">
+                        <div class="progress-track">
+                            <div class="progress-bar success" id="vramBar" style="width: 100%"></div>
+                        </div>
+                        <div class="telemetry-number" id="vramVal">100%</div>
+                    </div>
+                </div>
+                
+                <div class="telemetry-item">
+                    <div class="telemetry-header">CTO Review Compliance</div>
+                    <div class="telemetry-value-bar">
+                        <div class="progress-track">
+                            <div class="progress-bar success" id="ctoBar" style="width: 100%"></div>
+                        </div>
+                        <div class="telemetry-number" id="ctoVal">100%</div>
+                    </div>
+                </div>
+
+                <div class="telemetry-item">
+                    <div class="telemetry-header">Git Snapshot Success</div>
+                    <div class="telemetry-value-bar">
+                        <div class="progress-track">
+                            <div class="progress-bar success" id="gitBar" style="width: 100%"></div>
+                        </div>
+                        <div class="telemetry-number" id="gitVal">100%</div>
+                    </div>
+                </div>
+
+                <div class="telemetry-item">
+                    <div class="telemetry-header">QA Success Rate</div>
+                    <div class="telemetry-value-bar">
+                        <div class="progress-track">
+                            <div class="progress-bar success" id="qaBar" style="width: 100%"></div>
+                        </div>
+                        <div class="telemetry-number" id="qaVal">100%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div class="toast" id="toastBox">
+        <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <script>
+        // API Base configuration
+        const API_BASE = 'http://localhost:8001/api';
+
+        // Internal State Cache
+        let cachedTasks = [];
+        let cachedRooms = [];
+        let cachedAgents = [];
+        let pollingTimer = null;
+
+        // Model Profile matching
+        const AGENT_MODELS = {
+            'Hermes': 'Gemma-4-31B-JANG_4M-CRACK',
+            'Blinky': 'Gemma-4-31B-JANG_4M-CRACK',
+            'Blinky_Observer': 'Gemma-4-31B-JANG_4M-CRACK',
+            'Concept-Agent': 'Qwen3.6-35B-A3B-8bit',
+            'Art-Agent': 'Qwen3.6-35B-A3B-8bit',
+            'Dev-Agent': 'Qwen3.6-35B-A3B-8bit',
+            'System': 'N/A'
+        };
+
+        // DOM elements
+        const lastUpdatedVal = document.getElementById('lastUpdatedVal');
+        const ohiVal = document.getElementById('ohiVal');
+        const taskStatsVal = document.getElementById('taskStatsVal');
+        const activeRoomsVal = document.getElementById('activeRoomsVal');
+        const taskCountVal = document.getElementById('taskCountVal');
+        const agentCountVal = document.getElementById('agentCountVal');
+        const taskListContainer = document.getElementById('taskListContainer');
+        const agentListContainer = document.getElementById('agentListContainer');
+
+        const vramBar = document.getElementById('vramBar');
+        const vramVal = document.getElementById('vramVal');
+        const ctoBar = document.getElementById('ctoBar');
+        const ctoVal = document.getElementById('ctoVal');
+        const gitBar = document.getElementById('gitBar');
+        const gitVal = document.getElementById('gitVal');
+        const qaBar = document.getElementById('qaBar');
+        const qaVal = document.getElementById('qaVal');
+
+        const cardOhi = document.getElementById('cardOhi');
+        const cardServer = document.getElementById('cardServer');
+
+        // Show Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastBox');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+            
+            toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Fetch API Helper with network error catching
+        async function apiFetch(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error(`API Fetch Error [${endpoint}]:`, err);
+                return null;
+            }
+        }
+
+        // Action: Pardon Agent Warnings/Penalties
+        async function pardonAgent(agentName) {
+            try {
+                const response = await fetch(`${API_BASE}/agents/${agentName}/pardon`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    showToast(`🕊️ ${agentName} 에이전트 징계가 사면되고 경고 횟수가 리셋되었습니다.`, 'success');
+                    await refreshDashboard();
+                } else {
+                    const data = await response.json();
+                    showToast(`🚨 사면 처리 실패: ${data.detail || 'Unknown error'}`, 'danger');
+                }
+            } catch (err) {
+                showToast(`🚨 통신 장애: 사면 처리를 진행할 수 없습니다.`, 'danger');
+            }
+        }
+
+        // Core Dashboard Refresher
+        async function refreshDashboard() {
+            // Check server state
+            const serverAliveTest = await fetch(`${API_BASE}/config/cto-review`).catch(() => null);
+            if (!serverAliveTest) {
+                cardServer.className = 'stat-card danger';
+                cardServer.querySelector('.stat-description').innerHTML = '🔴 OFFLINE (Connection refused)';
+                showToast('🚨 백엔드 서버(Port 8001)가 멈춰있거나 연결할 수 없습니다.', 'danger');
+                return;
+            } else {
+                cardServer.className = 'stat-card';
+                cardServer.querySelector('.stat-description').innerHTML = '🟢 Active & serving requests';
+            }
+
+            // Parallel fetch metrics
+            const [tasks, rooms, agents, audit] = await Promise.all([
+                apiFetch('/tasks'),
+                apiFetch('/rooms'),
+                apiFetch('/agents'),
+                apiFetch('/audit/summary')
+            ]);
+
+            const now = new Date();
+            lastUpdatedVal.innerText = `Last updated: ${now.toLocaleTimeString()}`;
+
+            // Process Audit Telemetry
+            if (audit) {
+                ohiVal.innerHTML = `${audit.office_health_index}<span class="unit">%</span>`;
+                // Colorize OHI card border
+                if (audit.office_health_index >= 90) {
+                    cardOhi.className = 'stat-card success';
+                } else if (audit.office_health_index >= 60) {
+                    cardOhi.className = 'stat-card warning';
+                } else {
+                    cardOhi.className = 'stat-card danger';
+                }
+
+                // Telemetry Progress bars
+                updateTelemetryBar(vramBar, vramVal, audit.vram_health);
+                updateTelemetryBar(ctoBar, ctoVal, audit.cto_compliance);
+                updateTelemetryBar(gitBar, gitVal, audit.backup_reliability);
+                updateTelemetryBar(qaBar, qaVal, audit.qa_health);
+            }
+
+            // Process Tasks & Stats
+            if (tasks) {
+                cachedTasks = tasks;
+                taskCountVal.innerText = `${tasks.length} Tasks`;
+                const completedCount = tasks.filter(t => t.status === 'COMPLETED' || t.status === 'PASSED_WITHOUT_CLAUDE').length;
+                taskStatsVal.innerText = `${completedCount}/${tasks.length}`;
+            }
+
+            // Process Active Rooms
+            if (rooms) {
+                cachedRooms = rooms;
+                const activeCount = rooms.filter(r => r.is_active === 1).length;
+                activeRoomsVal.innerText = activeCount;
+            }
+
+            // Render project section (Plan & Phase mapping)
+            renderProjectPlan();
+
+            // Process Agents Status
+            if (agents) {
+                cachedAgents = agents;
+                agentCountVal.innerText = `${agents.length} Registered`;
+                renderAgents();
+            }
+        }
+
+        // Helper to update telemetry progress indicator
+        function updateTelemetryBar(barElement, textElement, value) {
+            barElement.style.width = `${value}%`;
+            textElement.innerText = `${value}%`;
+            
+            // set colors
+            barElement.className = 'progress-bar';
+            if (value >= 90) barElement.classList.add('success');
+            else if (value >= 60) barElement.classList.add('warning');
+            else barElement.classList.add('danger');
+        }
+
+        // Render project WBS list
+        function renderProjectPlan() {
+            if (cachedTasks.length === 0) {
+                taskListContainer.innerHTML = `
+                    <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem;">
+                        현재 등록된 마일스톤 태스크가 없습니다.
+                    </div>`;
+                return;
+            }
+
+            taskListContainer.innerHTML = '';
+            cachedTasks.forEach(task => {
+                // Find associated room if any
+                const associatedRoom = cachedRooms.find(r => r.task_id === task.task_id);
+                
+                let phaseMarkup = '';
+                if (associatedRoom) {
+                    const isActive = associatedRoom.is_active === 1;
+                    phaseMarkup = `
+                        <div class="room-phase-indicator ${isActive ? '' : 'closed'}">
+                            <span class="phase-pulse ${isActive ? '' : 'closed'}"></span>
+                            <strong>${isActive ? '진행 중 Phase' : '종료된 Phase'}:</strong> 
+                            ${associatedRoom.room_name} (턴 수: ${associatedRoom.turn_count}회)
+                        </div>
+                    `;
+                } else {
+                    phaseMarkup = `
+                        <div class="room-phase-indicator closed">
+                            <span class="phase-pulse closed"></span>
+                            <strong>연결된 회의실(Phase) 없음</strong>
+                        </div>
+                    `;
+                }
+
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                taskCard.innerHTML = `
+                    <div class="task-header">
+                        <span class="task-id">${task.task_id}</span>
+                        <span class="task-status ${task.status.toLowerCase()}">${task.status.replace('_', ' ')}</span>
+                    </div>
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-plan">${task.description || '상세 계획이 명시되지 않았습니다.'}</div>
+                    ${phaseMarkup}
+                `;
+                taskListContainer.appendChild(taskCard);
+            });
+        }
+
+        // Render agents status block
+        function renderAgents() {
+            if (cachedAgents.length === 0) {
+                agentListContainer.innerHTML = `
+                    <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem;">
+                        감지된 에이전트 인적정보가 존재하지 않습니다.
+                    </div>`;
+                return;
+            }
+
+            agentListContainer.innerHTML = '';
+            cachedAgents.forEach(agent => {
+                const modelName = AGENT_MODELS[agent.agent_name] || 'N/A';
+                const isPenalized = agent.is_penalized === 1;
+                
+                // Warn dots representation
+                let dots = '';
+                const limit = 3;
+                for (let i = 1; i <= limit; i++) {
+                    const isActive = agent.warning_count >= i;
+                    dots += `<span class="warn-dot ${isActive ? 'active' : ''} ${isPenalized ? 'penalized' : ''}"></span>`;
+                }
+
+                // Show button if penalized or has warning
+                const showPardonBtn = isPenalized || agent.warning_count > 0;
+                const pardonBtnMarkup = showPardonBtn 
+                    ? `<button class="btn-pardon" onclick="pardonAgent('${agent.agent_name}')">사면 (Pardon)</button>`
+                    : '';
+
+                const agentCard = document.createElement('div');
+                agentCard.className = `agent-card ${isPenalized ? 'penalized' : ''}`;
+                
+                agentCard.innerHTML = `
+                    <div class="agent-header">
+                        <div class="agent-name-group">
+                            <span class="agent-avatar-glow"></span>
+                            <span class="agent-name">${agent.agent_name}</span>
+                            <span class="agent-model">${modelName}</span>
+                        </div>
+                        <div class="agent-warnings">
+                            <span>경고 수:</span>
+                            ${dots}
+                        </div>
+                    </div>
+                    <div class="agent-footer">
+                        <div class="penalty-reason">
+                            ${isPenalized ? `⚠️ 징계 적용 (온도 0.0 고정) 사유: ${agent.last_penalty_reason || '정적 검증 위반'}` : '🟢 정상 근무 상태 (Normal)'}
+                        </div>
+                        ${pardonBtnMarkup}
+                    </div>
+                `;
+                agentListContainer.appendChild(agentCard);
+            });
+        }
+
+        // Set up Polling Loop and configuration
+        function startPolling(ms) {
+            // Clear existing if active
+            if (pollingTimer) {
+                clearInterval(pollingTimer);
+                pollingTimer = null;
+            }
+
+            if (ms > 0) {
+                pollingTimer = setInterval(refreshDashboard, ms);
+            }
+        }
+
+        // Attach event listeners
+        document.getElementById('btnManualRefresh').addEventListener('click', () => {
+            refreshDashboard();
+            showToast('🔄 즉시 리프래시를 완료했습니다.', 'success');
+        });
+
+        document.getElementById('pollingInterval').addEventListener('change', (e) => {
+            const interval = parseInt(e.target.value);
+            startPolling(interval);
+            if (interval > 0) {
+                showToast(`⏳ 자동 갱신 주기가 ${interval/1000}초로 셋팅되었습니다.`, 'success');
+            } else {
+                showToast('🛑 자동 갱신이 비활성화되었습니다.', 'success');
+            }
+        });
+
+        // Initialize on boot
+        refreshDashboard();
+        startPolling(3000); // Default polling 3 seconds
+    </script>
+</body>
+</html>

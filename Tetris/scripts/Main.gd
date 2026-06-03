@@ -11,6 +11,7 @@ var game_manager: GameManager
 var grid_manager: GridManager
 var piece_manager: PieceManager
 var input_manager: InputManager
+var visual_orchestrator: VisualOrchestrator
 
 func _ready():
 	print("[Main] Booting up Team-203 Tetris...")
@@ -25,6 +26,7 @@ func setup_managers():
 	piece_manager = PieceManager.new()
 	input_manager = InputManager.new()
 	var haptic_manager = HapticManager.new() # Added Haptic Manager
+	var visual_manager = VisualOrchestrator.new() # Added Visual Manager
 	
 	# Add them to the scene tree so they can use _ready and Timers
 	add_child(game_manager)
@@ -32,14 +34,18 @@ func setup_managers():
 	add_child(piece_manager)
 	add_child(input_manager)
 	add_child(haptic_manager)
+	add_child(visual_manager)
 	
 	# Dependency Injection: Link managers together
 	piece_manager.setup(grid_manager)
+	visual_orchestrator = visual_manager
+	visual_orchestrator.grid_manager = grid_manager
+	visual_orchestrator.piece_manager = piece_manager
 	
 	# Store haptic manager globally/locally for access
 	self.set('haptic_manager', haptic_manager)
 	
-	print("[Main] All managers linked and active. Haptics enabled.")
+	print("[Main] All managers linked and active. Haptics & Visuals enabled.")
 
 
 ## The main logic loop
@@ -48,6 +54,10 @@ func _process(_delta):
 		return
 	
 	handle_user_input()
+	
+	# 6. Visual Sync: Update the 3D view every frame
+	if visual_orchestrator:
+		visual_orchestrator.redraw_board()
 
 func handle_user_input():
 	# 1. Lateral Movement (Left/Right)

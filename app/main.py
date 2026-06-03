@@ -136,7 +136,66 @@ def get_virtual_dorm():
         raise HTTPException(status_code=404, detail="Virtual Dorm screensaver file not found.")
     return FileResponse(file_path)
 
+@app.get("/dashboard")
+def get_dashboard():
+    """
+    Serves the VIRTUAL_OFFICE / SYSTEM Dashboard page.
+    """
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(base_dir, "workspace", "shared", "dashboard.html")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Dashboard HTML file not found.")
+    return FileResponse(file_path)
+
+@app.get("/api/tasks", response_model=List[TaskResponse])
+def get_all_tasks():
+    """
+    Retrieves all tasks registered in the system.
+    """
+    conn = database.get_db_connection()
+    try:
+        rows = conn.execute("SELECT * FROM tasks ORDER BY created_at DESC").fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/rooms", response_model=List[RoomResponse])
+def get_all_rooms():
+    """
+    Retrieves all meeting rooms registered in the system.
+    """
+    conn = database.get_db_connection()
+    try:
+        rows = conn.execute("SELECT * FROM rooms ORDER BY created_at DESC").fetchall()
+        res_list = []
+        for row in rows:
+            d = dict(row)
+            d['allowed_agents'] = json.loads(d['allowed_agents'])
+            res_list.append(d)
+        return res_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/agents")
+def get_all_agents():
+    """
+    Retrieves warning and penalty statistics for all agents.
+    """
+    conn = database.get_db_connection()
+    try:
+        rows = conn.execute("SELECT * FROM agent_penalties ORDER BY agent_name ASC").fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
+
 def create_task(task: TaskCreate):
     existing = database.get_task(task.task_id)
     if existing:

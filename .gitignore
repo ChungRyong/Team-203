@@ -7,3 +7,10 @@ __pycache__/
 .vscode/
 venv/
 .venv/
+ComfyUI/
+workspace/projects/
+workspace/audit/
+*.png
+*.jpeg
+*.jpg
+*.log
