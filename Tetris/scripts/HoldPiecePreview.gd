@@ -24,6 +24,8 @@ func update_preview():
 
 func _format_piece_grid(piece_type: String) -> String:
 	var color = TetrominoData.COLORS.get(piece_type, "0xffffff")
+	# Strip "0x" prefix for bbcode (bbcode uses #RRGGBB format)
+	var bbcode_color = color.trim_prefix("0x")
 	var shape = piece_manager.data_provider.get_shape(piece_type)
 	var min_x = 10
 	var max_x = -10
@@ -47,7 +49,7 @@ func _format_piece_grid(piece_type: String) -> String:
 	for row in range(max_y - min_y, -1, -1):
 		for col in range(w):
 			if occupied.get(col * 10 + row, false):
-				result += "[color=%s]##[/color] " % color
+				result += "[color=%s]##[/color]" % bbcode_color
 			else:
 				result += "  "
 		result += "\n"

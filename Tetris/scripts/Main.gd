@@ -22,9 +22,19 @@ var game_timer: Timer
 var soft_drop_timer: Timer = null
 var soft_drop_accumulator: float = 0.0
 var soft_drop_delayed: bool = false
+var soft_drop_cells: int = 0
 const SOFT_DROP_ACCEL_DELAY: float = 0.3
 const SOFT_DROP_INITIAL_INTERVAL: float = 0.4
 const SOFT_DROP_MAX_INTERVAL: float = 0.05
+
+# Line clear flash
+var _flash_timer: Timer = null
+var _flash_orig_modulate: Color = Color(0.12, 0.12, 0.12)
+
+# Line tracking
+var total_lines_cleared: int = 0
+var session_max_lines: int = 0
+var session_current_lines: int = 0
 
 # UI references
 var score_label: Label
@@ -34,9 +44,11 @@ var next_piece_grid: NextPiecePreview
 var hold_piece_grid: HoldPiecePreview
 var game_over_overlay: CanvasLayer
 var start_overlay: CanvasLayer
-
-# Total lines cleared across game session
-var total_lines_cleared: int = 0
+var paused_label: Label
+var board_background: ColorRect
+var _final_score_label: Label
+var _max_clear_label: Label
+var _total_lines_label: Label
 
 # Current game state for input handling
 var game_started: bool = false
@@ -149,14 +161,43 @@ func _handle_soft_drop(delta: float):
 func _on_soft_drop_tick():
 	if game_manager.current_state != GameManager.GameState.PLAYING:
 		return
-	piece_manager.try_move_down()
+	if piece_manager.try_move_down():
+		soft_drop_cells += 1
 
 
 func _toggle_pause():
 	if game_manager.current_state == GameManager.GameState.PLAYING:
 		game_manager.toggle_pause()
+		_show_pause()
 	elif game_manager.current_state == GameManager.GameState.PAUSED:
 		game_manager.toggle_pause()
+		_hide_pause()
+
+
+func _show_pause():
+	paused_label.visible = true
+
+
+func _hide_pause():
+	paused_label.visible = false
+
+
+func _flash_board():
+	if _flash_timer != null:
+		_flash_timer.stop()
+	else:
+		_flash_timer = Timer.new()
+		_flash_timer.one_shot = true
+		_flash_timer.timeout.connect(_on_flash_done)
+		add_child(_flash_timer)
+
+	_flash_timer.wait_time = 0.15
+	board_background.set_modulate(Color.WHITE)
+	_flash_timer.start()
+
+
+func _on_flash_done():
+	board_background.set_modulate(_flash_orig_modulate)
 
 
 func lock_piece():
@@ -173,8 +214,17 @@ func lock_piece():
 	total_lines_cleared += cleared
 
 	if cleared > 0:
+		session_current_lines += cleared
+		if cleared > session_max_lines:
+			session_max_lines = cleared
 		game_manager.add_score(cleared, total_lines_cleared)
 		haptic_manager.play_line_clear_effect(cleared)
+		_flash_board()
+
+	# Award soft drop points before spawning the next piece
+	if soft_drop_cells > 0:
+		game_manager.add_soft_drop_score(soft_drop_cells)
+		soft_drop_cells = 0
 
 	if not piece_manager.spawn_piece():
 		_handle_game_over()
@@ -190,7 +240,12 @@ func _on_game_tick():
 func _handle_game_over():
 	game_manager.game_over()
 	game_timer.stop()
+	game_manager.game_over_signal.emit(game_manager.score, session_max_lines, total_lines_cleared)
 	game_over_overlay.visible = true
+
+	_final_score_label.text = "최종 점수: " + str(game_manager.score)
+	_max_clear_label.text = "단일 클리어 최고: " + str(session_max_lines)
+	_total_lines_label.text = "누적 라인: " + str(total_lines_cleared)
 
 
 func _start_game():
@@ -199,6 +254,9 @@ func _start_game():
 	game_manager.score = 0
 	game_manager.current_level = 1
 	total_lines_cleared = 0
+	session_max_lines = 0
+	session_current_lines = 0
+	soft_drop_cells = 0
 
 	piece_manager.spawn_piece()
 
@@ -214,6 +272,10 @@ func _start_game():
 
 	_hide_all_overlays()
 	_update_ui_labels()
+
+	_final_score_label.text = "최종 점수: 0"
+	_max_clear_label.text = "단일 클리어 최고: 0"
+	_total_lines_label.text = "누적 라인: 0"
 
 
 func restart_game():
@@ -233,6 +295,8 @@ func _build_ui():
 	hold_piece_grid = get_node("UI/HoldPieceGrid") as HoldPiecePreview
 	game_over_overlay = get_node("UI/GameOverOverlay")
 	start_overlay = get_node("UI/StartOverlay")
+	paused_label = get_node("UI/PausedLabel")
+	board_background = get_node("BoardBackground") as ColorRect
 
 	score_label.text = "점수: 0"
 	level_label.text = "레벨: 1"
@@ -244,6 +308,10 @@ func _build_ui():
 		next_piece_grid.piece_manager = piece_manager
 	if hold_piece_grid != null:
 		hold_piece_grid.piece_manager = piece_manager
+
+	_final_score_label = get_node("UI/GameOverOverlay/Panel/VBox/FinalScoreLabel")
+	_max_clear_label = get_node("UI/GameOverOverlay/Panel/VBox/MaxClearLabel")
+	_total_lines_label = get_node("UI/GameOverOverlay/Panel/VBox/TotalLinesLabel")
 
 	var retry_btn = get_node("UI/GameOverOverlay/Panel/VBox/RetryButton")
 	retry_btn.pressed.connect(restart_game)

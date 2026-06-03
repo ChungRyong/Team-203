@@ -4,7 +4,7 @@ extends Node
 
 class_name GameManager
 
-signal game_over_signal(final_score: int)
+signal game_over_signal(final_score: int, max_lines: int, total_lines: int)
 
 enum GameState { START, PLAYING, PAUSED, GAME_OVER }
 
@@ -56,6 +56,10 @@ func add_score(lines: int, total_lines: int):
 	var new_level = (total_lines // 10) + 1
 	if new_level > current_level:
 		update_level(new_level)
+
+
+func add_soft_drop_score(cells: int) -> void:
+	score += cells
 
 
 func toggle_pause():

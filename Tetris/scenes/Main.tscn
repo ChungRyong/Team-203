@@ -117,9 +117,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -180.0
-offset_top = -120.0
+offset_top = -140.0
 offset_right = 180.0
-offset_bottom = 120.0
+offset_bottom = 140.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -139,6 +139,24 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
 text = "최종 점수: 0"
+
+[node name="GameOverSeparator" type="ColorRect" parent="UI/GameOverOverlay/Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(200, 2)
+color = Color(0.3, 0.3, 0.3, 1)
+
+[node name="MaxClearLabel" type="Label" parent="UI/GameOverOverlay/Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "최적 클리어: 0"
+
+[node name="TotalLinesLabel" type="Label" parent="UI/GameOverOverlay/Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "누적 라인: 0"
 
 [node name="RetryButton" type="Button" parent="UI/GameOverOverlay/Panel/VBox"]
 layout_mode = 2
